@@ -4,75 +4,96 @@ import sys
 import os
 import struct
 
-def main(argv=sys.argv):
-    infile = args[0]
-    infileext = os.path.splitext(infile)[1].upper()
-    if infileext not in ['.MOBI', '.PRC', '.AZW', '.AZW4']:
-        print("Error: first parameter must be a Kindle/Mobipocket ebook.")
-        return 1
+class MobiReader(object):
+    def __init__(self, filename):
+        self._data = self._read_file(filename)
+        self._self_check()
 
-    try:
-        mobidata = open(infile, 'rb').read()
+    def _read_file(self, filename):
+        with open(filename, 'rb') as fp:
+            return fp.read()
 
-        palmheader = mobidata[0:78]
-        ident = palmheader[0x3C:0x3C+8].decode()
+    def data(self):
+        return memoryview(self._data)
 
-        if ident != 'BOOKMOBI':
-            raise Exception('invalid file format')
+    def palm_header(self):
+        return memoryview(self._data[0:78])
 
-        beg, = struct.unpack_from('>L', mobidata, 78)
-        end, = struct.unpack_from('>L', mobidata, 78+8)
+    def header(self):
+        beg, = struct.unpack_from('>L', self._data, 78)
+        end, = struct.unpack_from('>L', self._data, 78+8)
+        self.header_offset = beg
+        return memoryview(self._data[beg:end])
 
-        header = mobidata[beg:end]
+    def length(self):
+        length, = struct.unpack_from('>L', self.header(), 0x14)
+        return length
 
-        version, = struct.unpack_from('>L', header, 0x24)
-        length, = struct.unpack_from('>L', header, 0x14)
+    def version(self):
+        version, = struct.unpack_from('>L', self.header(), 0x24)
+        return version
+
+    def code_page(self):
+        code_page, = struct.unpack_from('>L', self.header(), 0x1c)
+        return code_page
+
+    def codec(self):
+        codec_map = {1252 : 'windows-1252', 65001: 'utf-8'}
+        codec = codec_map.get(self.code_page(), 'windows-1252')
+        return codec
+
+    def exth_flags(self):
+        exth_flags, = struct.unpack_from('>L', self.header(), 0x80)
+        return exth_flags
+
+    def exth(self):
+        assert(self.exth_flags() & 0x40)
+        self.exth_offset = self.length() + 16
+        exth = memoryview(self.header()[self.exth_offset:])
+        #extra = memoryview(self.header()[self.length() + 16: self.exth_offset])
+        _, count = struct.unpack('>LL', exth[4:12])
+        return exth, count
+
+    def iter_exth(self):
+        codec = self.codec()
+        exth, count = self.exth()
+        extheader = memoryview(exth[12:])
+        offset = 0
+        for _ in range(count):
+            key, size = struct.unpack('>LL', extheader[offset:offset+8])
+            content = bytes(extheader[offset+8: offset+size])
+            value = content.decode(codec)
+            yield (key, offset, value)
+            offset += size
+
+    def _self_check(self):
+        ident = bytes(self.palm_header()[0x3C:0x3C+8]).decode()
+        assert(ident == 'BOOKMOBI')
 
         # only support mobi6
-        assert(version == 6)
+        assert(self.version() == 6)
 
-        codepage, = struct.unpack_from('>L', header, 0x1c)
-        exth_flags, = struct.unpack_from('>L', header, 0x80)
-        codec_map = {1252 : 'windows-1252',
-                     65001: 'utf-8'}
-        codec = codec_map.get(codepage, 'windows-1252')
-        print('codec', codec)
+def find_exth_cdetype(mobi):
+    # find position of 501: cdetype
+    for key, offset, value in mobi.iter_exth():
+        #print(key, value)
+        if key == 501:
+            break
 
-        if exth_flags & 0x40:
-            exth_offset = length + 16
-            exth = header[exth_offset:]
-            extra = header[length + 16: exth_offset]
+    offset = mobi.header_offset + mobi.exth_offset + offset + 20
+    return offset
 
-        _length, num_items = struct.unpack('>LL', exth[4:12])
-        extheader = exth[12:]
+def clobber(filename, offset, buffer):
+    with open(filename, 'rb+') as fp:
+        fp.seek(offset)
+        fp.write(buffer)
 
-        pos = 0
-        for _ in range(num_items):
-            id, size = struct.unpack('>LL', extheader[pos:pos+8])
-            content = extheader[pos + 8: pos + size]
-            if id == 501:
-                name = 'cdetype'
-                #print(pos, name, content.decode(codec))
-                break
-            pos += size
-
-        loc = beg + exth_offset + pos + 20
-
-        with open(infile, 'rb+') as fp:
-            fp.seek(loc)
-            buffer = fp.read(4).decode(codec)
-            if buffer == 'EBOK':
-                print(f'Found EBOK, converting to PDOC')
-                fp.seek(loc)
-                fp.write('PDOC'.encode(codec))
-            elif buffer == 'PDOC':
-                print('File is already PDOC')
-
-    except Exception as e:
-        print("Error: %s" % e)
-        return 1
-
-    return 0
+def main(argv=sys.argv):
+    filename = argv[1]
+    mobi = MobiReader(filename)
+    offset = find_exth_cdetype(mobi)
+    buffer = 'PDOC'.encode(mobi.codec())
+    clobber(filename, offset, buffer)
 
 if __name__ == '__main__':
     sys.exit(main())
