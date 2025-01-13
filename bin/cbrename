@@ -22,6 +22,7 @@ class ComicInfo(dict):
     def parse(f, validate=False):
         xml_tree = lxml.etree.parse(f)
 
+        # TODO allow injecting default values into validated documents
         if validate:
             ComicInfo.validate(xml_tree)
 
