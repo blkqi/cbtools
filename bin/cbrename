@@ -4,6 +4,7 @@ import os
 import sys
 import json
 import string
+import shutil
 import zipfile
 import pathlib
 import argparse
@@ -52,15 +53,18 @@ class CBZRenamer(object):
         return self._template.substitute(defaults, **self._cbzfile.info()).strip()
 
     def fullpath(self, root=''):
-        path = pathlib.PurePath(self._substitute())
+        path = pathlib.Path(self._substitute())
         return (root / path).with_suffix(self.FILENAME_SUFFIX)
 
 def renamepath(oldpath, newpath):
-    newpath.mkdir(parents=True, exist_ok=True)
-    os.rename(path, newpath)
+    newpath.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(oldpath, newpath)
+    oldpath.unlink()
 
-def cbzrename(file, root, pattern, dryrun):
+def cbrename(file, pattern, root, dryrun):
     for path in file:
+        path = pathlib.Path(path)
+
         renamer = CBZRenamer(path, pattern)
         newpath = renamer.fullpath(root)
 
@@ -79,7 +83,7 @@ def main():
     args = parser.parse_args()
 
     try:
-        cbzrename(**vars(args))
+        cbrename(**vars(args))
     except KeyboardInterrupt:
         return 1
     return 0
