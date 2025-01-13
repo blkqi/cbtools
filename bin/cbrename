@@ -43,9 +43,9 @@ class CBZFile(object):
 class CBZRenamer(object):
     FILENAME_SUFFIX = '.cbz'
 
-    def __init__(self, pattern):
+    def __init__(self, pattern, default=''):
         self._template = string.Template(pattern)
-        self._defaults = {key: '' for key in self._template.get_identifiers()}
+        self._defaults = {key: default for key in self._template.get_identifiers()}
 
     def _substitute(self, cbzfile):
         return self._template.substitute(self._defaults, **cbzfile.info()).strip()
@@ -55,6 +55,7 @@ class CBZRenamer(object):
         return (root / path).with_suffix(self.FILENAME_SUFFIX)
 
 def renamepath(src, dst):
+    # create required directory structure
     dst.parent.mkdir(parents=True, exist_ok=True)
 
     try:
