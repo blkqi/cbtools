@@ -12,13 +12,19 @@ import lxml.etree
 ARG_PATTERN_DEFAULT = '${Series}/${Series} ${Volume}'
 
 class ComicInfo(dict):
+    XML_SCHEMA_FILENAME = 'ComicInfo.xsd'
+
     def __init__(self, *args, **kwds):
         super(ComicInfo, self).__init__(*args, **kwds)
 
-    def from_file(f):
-        tree = lxml.etree.parse(f)
-        items = {child.tag: child.text for child in tree.getroot()}
-        return ComicInfo(items)
+    def parse(f):
+        xml_tree = lxml.etree.parse(f)
+        xsd_tree = lxml.etree.parse(ComicInfo.XML_SCHEMA_FILENAME)
+
+        schema = lxml.etree.XMLSchema(xsd_tree)
+        schema.validate(xml_tree)
+
+        return ComicInfo((child.tag, child.text) for child in xml_tree.getroot())
 
 class CBZFile(object):
     COMICINFO_FILENAME = 'ComicInfo.xml'
@@ -27,7 +33,7 @@ class CBZFile(object):
         with zipfile.ZipFile(file, 'r') as z:
             try:
                 with z.open(self.COMICINFO_FILENAME) as c:
-                    self._info = ComicInfo.from_file(c)
+                    self._info = ComicInfo.parse(c)
             except KeyError:
                 self._info = {}
 
@@ -35,15 +41,19 @@ class CBZFile(object):
         return self._info
 
 class CBZRenamer(object):
-    def __init__(self, filename, pattern, root=''):
+    FILENAME_SUFFIX = '.cbz'
+
+    def __init__(self, filename, pattern):
         self._cbzfile = CBZFile(filename)
         self._template = string.Template(pattern)
-        self._root = root
 
-    def path(self):
-        info = self._cbzfile.info()
-        path = self._template.safe_substitute(**info)
-        return self._root / pathlib.PurePath(path).with_suffix('.cbz')
+    def _substitute(self):
+        defaults = {key: '' for key in self._template.get_identifiers()}
+        return self._template.substitute(defaults, **self._cbzfile.info()).strip()
+
+    def fullpath(self, root=''):
+        path = pathlib.PurePath(self._substitute())
+        return (root / path).with_suffix(self.FILENAME_SUFFIX)
 
 def renamepath(oldpath, newpath):
     newpath.mkdir(parents=True, exist_ok=True)
@@ -51,8 +61,8 @@ def renamepath(oldpath, newpath):
 
 def cbzrename(file, root, pattern, dryrun):
     for path in file:
-        renamer = CBZRenamer(path, pattern, root)
-        newpath = renamer.path()
+        renamer = CBZRenamer(path, pattern)
+        newpath = renamer.fullpath(root)
 
         if dryrun:
             print(f'(dryrun) {path} -> {newpath}')
