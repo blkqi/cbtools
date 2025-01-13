@@ -43,23 +43,22 @@ class CBZFile(object):
 class CBZRenamer(object):
     FILENAME_SUFFIX = '.cbz'
 
-    def __init__(self, filename, pattern):
-        self._cbzfile = CBZFile(filename)
+    def __init__(self, pattern):
         self._template = string.Template(pattern)
+        self._defaults = {key: '' for key in self._template.get_identifiers()}
 
-    def _substitute(self):
-        defaults = {key: '' for key in self._template.get_identifiers()}
-        return self._template.substitute(defaults, **self._cbzfile.info()).strip()
+    def _substitute(self, cbzfile):
+        return self._template.substitute(self._defaults, **cbzfile.info()).strip()
 
-    def fullpath(self, root=''):
-        path = pathlib.Path(self._substitute())
+    def fullpath(self, cbzfile, root=''):
+        path = pathlib.Path(self._substitute(cbzfile))
         return (root / path).with_suffix(self.FILENAME_SUFFIX)
 
-def renamepath(oldpath, newpath):
-    newpath.parent.mkdir(parents=True, exist_ok=True)
+def renamepath(src, dst):
+    dst.parent.mkdir(parents=True, exist_ok=True)
 
     try:
-        oldpath.rename(newpath)
+        src.rename(dst)
     except OSError as e:
         if e.errno == 18:
             pass
@@ -69,25 +68,26 @@ def renamepath(oldpath, newpath):
         return
 
     # errno 18: target filesystem differs - fallback to copy file
-    shutil.copyfile(oldpath, newpath)
-    oldpath.unlink()
+    shutil.copyfile(src, dst)
+    src.unlink()
 
-def cbrename(file, pattern, root, dryrun):
-    for path in file:
-        path = pathlib.Path(path)
+def cbrename(files, pattern, root, dryrun):
+    renamer = CBZRenamer(pattern)
+    inpaths = (pathlib.Path(f) for f in files)
 
-        renamer = CBZRenamer(path, pattern)
-        newpath = renamer.fullpath(root)
+    for srcpath in inpaths:
+        cbzfile = CBZFile(srcpath)
+        dstpath = renamer.fullpath(cbzfile, root=root)
 
         if dryrun:
-            print(f'(dryrun) {path} -> {newpath}')
-            #print(json.dumps(CBZFile(path).info(), indent=2))
+            print(f'(dryrun) {srcpath} -> {dstpath}')
+            #print(json.dumps(cbzfile.info(), indent=2))
         else:
-            renamepath(path, newpath)
+            renamepath(srcpath, dstpath)
 
 def main():
     parser = argparse.ArgumentParser(prog='cbrename')
-    parser.add_argument('file', nargs='+')
+    parser.add_argument('files', nargs='+')
     parser.add_argument('--root', default='')
     parser.add_argument('--pattern', default=ARG_PATTERN_DEFAULT)
     parser.add_argument('--dryrun', action='store_true')
