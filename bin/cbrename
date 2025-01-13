@@ -7,7 +7,7 @@ import string
 import zipfile
 import pathlib
 import argparse
-import xml.etree.ElementTree
+import lxml.etree
 
 ARG_PATTERN_DEFAULT = '${Series}/${Series} ${Volume}'
 
@@ -16,7 +16,7 @@ class ComicInfo(dict):
         super(ComicInfo, self).__init__(*args, **kwds)
 
     def from_file(f):
-        tree = xml.etree.ElementTree.parse(f)
+        tree = lxml.etree.parse(f)
         items = {child.tag: child.text for child in tree.getroot()}
         return ComicInfo(items)
 
@@ -55,7 +55,7 @@ def cbzrename(file, root, pattern, dryrun):
         newpath = renamer.path()
 
         if dryrun:
-            print(f'{path} -> {newpath}')
+            print(f'(dryrun) {path} -> {newpath}')
             #print(json.dumps(CBZFile(path).info(), indent=2))
         else:
             renamepath(path, newpath)
