@@ -2,13 +2,12 @@
 
 import os
 import sys
-import json
 import string
 import shutil
 import pathlib
 import argparse
 
-from cbtools import ComicInfo, CBZFile
+from cbtools import CBZFile
 
 ARG_PATTERN_DEFAULT = '${Series} (${Year})/${Series} ${Volume}'
 
