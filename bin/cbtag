@@ -1,0 +1,64 @@
+#!/usr/bin/env python
+
+import os
+import sys
+import json
+import requests
+import argparse
+
+def get_series_info_by_id(series_id):
+    url = 'https://graphql.anilist.co'
+    media_format = 'MANGA'
+    query = '''
+            query search_details_by_series_id ($series_id: Int, $format: MediaFormat) {
+              Media (id: $series_id, type: MANGA, format: $format) {
+                id
+                status
+                volumes
+                siteUrl
+                title {
+                  romaji
+                  english
+                  native
+                }
+                type
+                genres
+                synonyms
+                startDate {
+                  day
+                  month
+                  year
+                }
+                coverImage {
+                  extraLarge
+                }
+                description
+              }
+            }
+            '''
+    variables = {
+        'series_id': series_id,
+        'format': media_format
+    }
+    response = requests.post(url, json={'query': query, 'variables': variables})
+    return response.json()
+
+def cbtag(series_id, dryrun):
+    data = get_series_info_by_id(series_id)
+    print(json.dumps(data, indent=2))
+
+def main():
+    parser = argparse.ArgumentParser(prog='cbtag')
+    parser.add_argument('--series-id', type=int, default=33614)
+    parser.add_argument('--dryrun', action='store_true')
+    args = parser.parse_args()
+
+    try:
+        cbtag(**vars(args))
+    except KeyboardInterrupt:
+        return 1
+
+    return 0
+
+if __name__ == '__main__':
+    sys.exit(main())
