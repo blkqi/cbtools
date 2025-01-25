@@ -43,6 +43,6 @@ class CBZFile(zipfile.ZipFile):
             if member.is_dir():
                 continue
 
-            member.filename = member.filename.replace('/', '_')
+            member.filename = member.filename.replace('/', '__')
 
             self.extract(member, path)
