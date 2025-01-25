@@ -10,8 +10,8 @@ import subprocess
 
 from cbtools import CBZFile, ComicInfo
 
-WAIFU2X_NAME = '/usr/bin/waifu2x-ncnn-vulkan'
-WAIFU2X_MODEL = '/usr/share/waifu2x-ncnn-vulkan/models-upconv_7_anime_style_art_rgb'
+WAIFU2X_NAME = os.getenv('WAIFU2X_NAME', '/usr/bin/waifu2x-ncnn-vulkan')
+WAIFU2X_MODEL = os.getenv('WAIFU2X_MODEL', '/usr/bin/waifu2x-ncnn-vulkan/models-upconv_7_anime_style_art_rgb')
 OUTFILE_PREFIX = 'cbscale-'
 
 def upscale(cbzfile, scale, noise, ftype, gpuid, model=WAIFU2X_MODEL):
