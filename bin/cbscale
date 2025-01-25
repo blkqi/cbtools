@@ -35,12 +35,15 @@ def upscale(cbzfile, scale, noise, ftype, gpuid, model=WAIFU2X_MODEL):
             stderr=subprocess.PIPE
         )
 
+        # TODO Handle errors and logging
         stdout, stderr = process.communicate()
         #print(stdout.decode())
         #print(stderr.decode())
 
         srcpath = pathlib.Path(srcdir)
         dstpath = pathlib.Path(dstdir)
+
+        # TODO Output name should use a suffix not prefix
         outname = f'{OUTFILE_PREFIX}{cbzfile.filename}'
 
         with CBZFile(outname, mode='w') as cbzfile:
@@ -54,10 +57,8 @@ def upscale(cbzfile, scale, noise, ftype, gpuid, model=WAIFU2X_MODEL):
                 cbzfile.write(path, arcname=path.name)
 
 def cbscale(files, **kwds):
-    inpaths = (pathlib.Path(f) for f in files)
-
-    for srcpath in inpaths:
-        with CBZFile(srcpath) as cbzfile:
+    for path in (pathlib.Path(f) for f in files):
+        with CBZFile(path) as cbzfile:
             upscale(cbzfile, **kwds)
 
 def main():
