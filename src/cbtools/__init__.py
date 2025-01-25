@@ -23,10 +23,8 @@ class ComicInfo(dict):
         schema.assertValid(xml_tree)
 
 class CBZFile(zipfile.ZipFile):
-    FILE_MODE = 'r' #read-only
-
-    def __init__(self, file):
-        super(CBZFile, self).__init__(file, mode=self.FILE_MODE)
+    def __init__(self, file, **kwds):
+        super(CBZFile, self).__init__(file, **kwds)
 
     def info(self, validate=False):
         try:
