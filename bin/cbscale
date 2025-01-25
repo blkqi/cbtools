@@ -12,7 +12,7 @@ from cbtools import CBZFile, ComicInfo
 
 WAIFU2X_BIN = os.getenv('WAIFU2X_BIN', '/usr/bin/waifu2x-ncnn-vulkan')
 WAIFU2X_MODEL = os.getenv('WAIFU2X_MODEL', '/usr/share/waifu2x-ncnn-vulkan/models-upconv_7_anime_style_art_rgb')
-OUTFILE_PREFIX = 'cbscale-'
+OUTFILE_SUFFIX = 'cbscale'
 
 def upscale(cbzfile, scale, noise, ftype, gpuid, model=WAIFU2X_MODEL):
     with tempfile.TemporaryDirectory() as srcdir, \
@@ -42,9 +42,8 @@ def upscale(cbzfile, scale, noise, ftype, gpuid, model=WAIFU2X_MODEL):
 
         srcpath = pathlib.Path(srcdir)
         dstpath = pathlib.Path(dstdir)
-
-        # TODO Output name should use a suffix not prefix
-        outname = f'{OUTFILE_PREFIX}{cbzfile.filename}'
+        outpath = pathlib.Path(cbzfile.filename)
+        outname = f'{outpath.with_suffix('')}_{OUTFILE_SUFFIX}{outpath.suffix}'
 
         with CBZFile(outname, mode='w') as cbzfile:
             # add comicinfo
