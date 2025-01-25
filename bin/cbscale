@@ -42,8 +42,6 @@ def upscale(cbzfile, scale, noise, ftype, gpuid, model=WAIFU2X_MODEL):
 
         srcpath = pathlib.Path(srcdir)
         dstpath = pathlib.Path(dstdir)
-
-        # TODO Output name should use a suffix not prefix
         outpath = pathlib.Path(cbzfile.filename)
         outname = f'{outpath.with_suffix('')}_{OUTFILE_SUFFIX}{outpath.suffix}'
 
