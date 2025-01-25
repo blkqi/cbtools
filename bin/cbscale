@@ -59,10 +59,12 @@ def upscale(cbzfile, scale, noise, ftype, gpuid, model=WAIFU2X_MODEL):
             for path in sorted(dstpath.iterdir()):
                 cbzfile.write(path, arcname=path.name)
 
+
 def cbscale(files, **kwds):
     for path in (pathlib.Path(f) for f in glob(files)):
         with CBZFile(path) as cbzfile:
             upscale(cbzfile, **kwds)
+
 
 def main():
     parser = argparse.ArgumentParser(prog='cbscale')
@@ -79,6 +81,7 @@ def main():
         return 1
 
     return 0
+
 
 if __name__ == '__main__':
     sys.exit(main())
