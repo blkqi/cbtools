@@ -9,10 +9,13 @@ import tempfile
 import subprocess
 
 from cbtools import CBZFile, ComicInfo
+from glob import glob
+
 
 WAIFU2X_BIN = os.getenv('WAIFU2X_BIN', '/usr/bin/waifu2x-ncnn-vulkan')
 WAIFU2X_MODEL = os.getenv('WAIFU2X_MODEL', '/usr/share/waifu2x-ncnn-vulkan/models-upconv_7_anime_style_art_rgb')
 OUTFILE_SUFFIX = 'cbscale'
+
 
 def upscale(cbzfile, scale, noise, ftype, gpuid, model=WAIFU2X_MODEL):
     with tempfile.TemporaryDirectory() as srcdir, \
@@ -56,13 +59,13 @@ def upscale(cbzfile, scale, noise, ftype, gpuid, model=WAIFU2X_MODEL):
                 cbzfile.write(path, arcname=path.name)
 
 def cbscale(files, **kwds):
-    for path in (pathlib.Path(f) for f in files):
+    for path in (pathlib.Path(f) for f in glob(files)):
         with CBZFile(path) as cbzfile:
             upscale(cbzfile, **kwds)
 
 def main():
     parser = argparse.ArgumentParser(prog='cbscale')
-    parser.add_argument('files', nargs='+')
+    parser.add_argument('files')
     parser.add_argument('--scale', default=2, choices=[1,2,4,8,16,32])
     parser.add_argument('--noise', default=2, choices=[-1,0,1,2,3])
     parser.add_argument('--ftype', default='jpg', choices=['jpg', 'png', 'webp'], type=str)
