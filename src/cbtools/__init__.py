@@ -34,3 +34,15 @@ class CBZFile(zipfile.ZipFile):
             pass
 
         return ComicInfo()
+
+    def extractall(self, path=None, members=None, pwd=None, flatten=False):
+        if not flatten:
+            return super().extractall(path=path, members=members, pwd=pwd)
+
+        for member in self.infolist():
+            if member.is_dir():
+                continue
+
+            member.filename = member.filename.replace('/', '__')
+
+            self.extract(member, path)

@@ -18,7 +18,7 @@ def upscale(cbzfile, scale, noise, ftype, gpuid, model=WAIFU2X_MODEL):
     with tempfile.TemporaryDirectory() as srcdir, \
             tempfile.TemporaryDirectory() as dstdir:
 
-        cbzfile.extractall(path=srcdir)
+        cbzfile.extractall(path=srcdir, flatten=True)
 
         process = subprocess.Popen(
             [
