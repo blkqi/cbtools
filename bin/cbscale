@@ -1,0 +1,80 @@
+#!/usr/bin/env python
+
+import os
+import sys
+import shutil
+import pathlib
+import argparse
+import tempfile
+import subprocess
+
+from cbtools import CBZFile, ComicInfo
+
+WAIFU2X_NAME = '/usr/bin/waifu2x-ncnn-vulkan'
+WAIFU2X_MODEL = '/usr/share/waifu2x-ncnn-vulkan/models-upconv_7_anime_style_art_rgb'
+OUTFILE_PREFIX = 'cbscale-'
+
+def upscale(cbzfile, scale, noise, ftype, gpuid, model=WAIFU2X_MODEL):
+    with tempfile.TemporaryDirectory() as srcdir, \
+            tempfile.TemporaryDirectory() as dstdir:
+
+        cbzfile.extractall(path=srcdir)
+
+        process = subprocess.Popen(
+            [
+                WAIFU2X_NAME,
+                '-i', srcdir,
+                '-o', dstdir,
+                '-s', str(scale),
+                '-n', str(noise),
+                '-f', ftype,
+                '-g', gpuid,
+                '-m', model
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE
+        )
+
+        stdout, stderr = process.communicate()
+        #print(stdout.decode())
+        #print(stderr.decode())
+
+        srcpath = pathlib.Path(srcdir)
+        dstpath = pathlib.Path(dstdir)
+        outname = f'{OUTFILE_PREFIX}{cbzfile.filename}'
+
+        with CBZFile(outname, mode='w') as cbzfile:
+            # add comicinfo
+            path = srcpath / ComicInfo.XML_FILENAME
+            if path.exists():
+                cbzfile.write(path, arcname=path.name)
+
+            # add images
+            for path in sorted(dstpath.iterdir()):
+                cbzfile.write(path, arcname=path.name)
+
+def cbscale(files, **kwds):
+    inpaths = (pathlib.Path(f) for f in files)
+
+    for srcpath in inpaths:
+        with CBZFile(srcpath) as cbzfile:
+            upscale(cbzfile, **kwds)
+
+def main():
+    parser = argparse.ArgumentParser(prog='cbscale')
+    parser.add_argument('files', nargs='+')
+    parser.add_argument('--scale', default=2, choices=[1,2,4,8,16,32])
+    parser.add_argument('--noise', default=2, choices=[-1,0,1,2,3])
+    parser.add_argument('--ftype', default='jpg', choices=['jpg', 'png', 'webp'], type=str)
+    parser.add_argument('--gpuid', default='auto', type=str)
+    args = parser.parse_args()
+
+    try:
+        cbscale(**vars(args))
+    except KeyboardInterrupt:
+        return 1
+
+    return 0
+
+if __name__ == '__main__':
+    sys.exit(main())
