@@ -4,6 +4,7 @@ import os
 import sys
 import shutil
 import pathlib
+import platform
 import argparse
 import tempfile
 import subprocess
@@ -57,13 +58,16 @@ def upscale(cbzfile, scale, noise, ftype, gpuid, model=WAIFU2X_MODEL):
                 cbzfile.write(path, arcname=path.name)
 
 def cbscale(files, **kwds):
-    for path in (pathlib.Path(f) for f in glob(files)):
+    if platform.system() == 'Windows':
+        files = [f for e in files for f in glob(e)]
+
+    for path in (pathlib.Path(f) for f in files):
         with CBZFile(path) as cbzfile:
             upscale(cbzfile, **kwds)
 
 def main():
     parser = argparse.ArgumentParser(prog='cbscale')
-    parser.add_argument('files')
+    parser.add_argument('files', nargs='+')
     parser.add_argument('--scale', default=2, choices=[1,2,4,8,16,32])
     parser.add_argument('--noise', default=2, choices=[-1,0,1,2,3])
     parser.add_argument('--ftype', default='jpg', choices=['jpg', 'png', 'webp'], type=str)
