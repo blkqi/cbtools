@@ -3,8 +3,27 @@
 import os
 import sys
 import json
+import jmespath
 import requests
 import argparse
+
+ANILIST_COMICINFO_JMESMAP = {
+    'Series': 'title.romaji',
+    'LocalizedSeries': 'title.english',
+    'Count': 'volumes',
+    'Writer': 'staff.edges[?role.contains(@, `Story`)].node.name.full | [0]',
+    'Penciller': 'staff.edges[?role.contains(@, `Art`)].node.name.full | [0]',
+    'Inker': 'staff.edges[?role.contains(@, `Art`)].node.name.full | [0]',
+    'Colorist': 'staff.edges[?role.contains(@, `Art`)].node.name.full | [0]',
+    'Publisher': 'studios.edges[?isMain==true].node.name',
+    'Genre': 'genres[*] | join(`,`, @)',
+    'Tags': 'tags[*].name | join(`,`, @)',
+    'Summary': 'description',
+    'Web': 'siteUrl',
+    'Year': 'startDate.year',
+    'Month': 'startDate.month',
+    'Day': 'startDate.day',
+}
 
 def get_series_info_by_id(series_id):
     url = 'https://graphql.anilist.co'
@@ -13,26 +32,39 @@ def get_series_info_by_id(series_id):
             query search_details_by_series_id ($series_id: Int, $format: MediaFormat) {
               Media (id: $series_id, type: MANGA, format: $format) {
                 id
-                status
                 volumes
                 siteUrl
                 title {
                   romaji
                   english
-                  native
                 }
-                type
+                studios {
+                  edges {
+                    node {
+                      name
+                    }
+                  }
+                }
+                staff {
+                  edges {
+                    role
+                    node {
+                      name {
+                        full
+                      }
+                    }
+                  }
+                }
                 genres
-                synonyms
+                tags {
+                  name
+                }
+                description
                 startDate {
                   day
                   month
                   year
                 }
-                coverImage {
-                  extraLarge
-                }
-                description
               }
             }
             '''
@@ -43,9 +75,17 @@ def get_series_info_by_id(series_id):
     response = requests.post(url, json={'query': query, 'variables': variables})
     return response.json()
 
+def map(anilist_data):
+    data = {}
+
+    for comicinfo_key, anilist_key in ANILIST_COMICINFO_JMESMAP.items():
+        data[comicinfo_key] = jmespath.search(anilist_key, anilist_data)
+
+    return data
+
 def cbtag(series_id, dryrun):
-    data = get_series_info_by_id(series_id)
-    print(json.dumps(data, indent=2))
+    data = get_series_info_by_id(series_id).get('data', {}).get('Media', {})
+    print(json.dumps(map(data), indent=2))
 
 def main():
     parser = argparse.ArgumentParser(prog='cbtag')
