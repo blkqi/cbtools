@@ -78,6 +78,9 @@ def get_series_info_by_id(series_id):
 def map(anilist_data):
     data = {}
 
+    if not anilist_data:
+        return data
+
     for comicinfo_key, anilist_key in ANILIST_COMICINFO_JMESMAP.items():
         data[comicinfo_key] = jmespath.search(anilist_key, anilist_data)
 
