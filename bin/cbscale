@@ -16,31 +16,38 @@ WAIFU2X_BIN = os.getenv('WAIFU2X_BIN', '/usr/bin/waifu2x-ncnn-vulkan')
 WAIFU2X_MODEL = os.getenv('WAIFU2X_MODEL', '/usr/share/waifu2x-ncnn-vulkan/models-upconv_7_anime_style_art_rgb')
 OUTFILE_SUFFIX = 'cbscale'
 
-def upscale(cbzfile, scale, noise, ftype, gpuid, model=WAIFU2X_MODEL):
+def upscale(cbzfile, scale, noise, ftype, gpuid,
+            entrypoint=WAIFU2X_BIN, model=WAIFU2X_MODEL):
+
     with tempfile.TemporaryDirectory() as srcdir, \
             tempfile.TemporaryDirectory() as dstdir:
 
         cbzfile.extractall(path=srcdir, flatten=True)
 
-        process = subprocess.Popen(
-            [
-                WAIFU2X_BIN,
-                '-i', srcdir,
-                '-o', dstdir,
-                '-s', str(scale),
-                '-n', str(noise),
-                '-f', ftype,
-                '-g', gpuid,
-                '-m', model
-            ],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE
-        )
+        try:
+            process = subprocess.Popen(
+                [
+                    entrypoint,
+                    '-i', srcdir,
+                    '-o', dstdir,
+                    '-s', str(scale),
+                    '-n', str(noise),
+                    '-f', ftype,
+                    '-g', gpuid,
+                    '-m', model,
+                    '-j', '1:8:8'
+                ],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT
+            )
+        except FileNotFoundError:
+            raise RuntimeError(f'waifu2x-ncnn-vulkan not found at {entrypoint}')
 
-        # TODO Handle errors and logging
-        stdout, stderr = process.communicate()
-        #print(stdout.decode())
-        #print(stderr.decode())
+        stdout, _ = process.communicate()
+
+        if process.returncode != 0:
+            sys.stderr.write(stdout.decode())
+            raise RuntimeError(f'waifu2x-ncnn-vulkan error code {process.returncode}')
 
         srcpath = pathlib.Path(srcdir)
         dstpath = pathlib.Path(dstdir)
