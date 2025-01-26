@@ -23,10 +23,8 @@ class ComicInfo(dict):
         schema.assertValid(xml_tree)
 
 class CBZFile(zipfile.ZipFile):
-    FILE_MODE = 'r' #read-only
-
-    def __init__(self, file):
-        super(CBZFile, self).__init__(file, mode=self.FILE_MODE)
+    def __init__(self, file, **kwds):
+        super(CBZFile, self).__init__(file, **kwds)
 
     def info(self, validate=False):
         try:
@@ -36,3 +34,15 @@ class CBZFile(zipfile.ZipFile):
             pass
 
         return ComicInfo()
+
+    def extractall(self, path=None, members=None, pwd=None, flatten=False):
+        if not flatten:
+            return super().extractall(path=path, members=members, pwd=pwd)
+
+        for member in self.infolist():
+            if member.is_dir():
+                continue
+
+            member.filename = member.filename.replace('/', '__')
+
+            self.extract(member, path)
