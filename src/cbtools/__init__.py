@@ -1,7 +1,11 @@
+import dictdiffer
 import jmespath
 import lxml.etree
+import pathlib
 import re
 import requests
+import shutil
+import tempfile
 import zipfile
 
 class AniList:
@@ -112,6 +116,11 @@ class ComicInfo(dict):
         xsd_tree = lxml.etree.parse(ComicInfo.XSD_FILENAME)
         lxml.etree.XMLSchema(xsd_tree).assertValid(tree)
 
+    def compare(self, with_data):
+        result = dictdiffer.diff(self, with_data)
+        for item in result:
+            print(item)
+
     def map(self, source, jmesmap):
         for target_key, source_key in jmesmap.items():
             value = jmespath.search(source_key, source)
@@ -136,6 +145,22 @@ class CBZFile(zipfile.ZipFile):
             member.filename = member.filename.replace('/', '__')
 
             self.extract(member, path)
+
+    def update_cinfo(self, cinfo):
+        with tempfile.TemporaryDirectory() as tempdir:
+            temppath = pathlib.Path(tempdir) / 'cbz'
+
+            with CBZFile(temppath, mode='w') as cbzwrite:
+
+                cbzwrite.writestr(ComicInfo.XML_FILENAME, cinfo.encode())
+
+                for item in self.infolist():
+                    if item.filename != ComicInfo.XML_FILENAME:
+                        data = self.read(item.filename)
+                        cbzwrite.writestr(item, data)
+
+            shutil.copyfile(temppath, self.filename)
+            temppath.unlink()
 
     def _get_info(self):
         try:
