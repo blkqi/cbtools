@@ -100,9 +100,17 @@ def print_cinfo_diff(left, right):
 def cbtag(files, series_id, dryrun):
     cinfo = map_result(get_series_info_by_id(series_id).get('data', {}).get('Media', {}))
 
+    #data = cinfo.encode(pretty_print=True)
+    #sys.stdout.buffer.write(data)
+    #print(json.dumps(cinfo, indent=2))
+
     for path in files:
         with CBZFile(path) as cbzfile:
             old_cinfo = cbzfile.info()
+
+            #data = old_cinfo.encode(pretty_print=True)
+            #sys.stdout.buffer.write(data)
+            #print(json.dumps(old_cinfo, indent=2))
 
             # TODO Overwrite ComicInfo.xml in archive.
             #      Not directly supports by ZipFile!
