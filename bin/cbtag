@@ -143,7 +143,7 @@ def cbtag(files, series_id, dryrun):
           cinfo['Volume'] = parse_volume(cfile.filename)
 
           if dryrun:
-                  print_cinfo_diff(cfile.info(), cinfo)
+              print_cinfo_diff(cfile.info(), cinfo)
           else:
               replace_cfile_cinfo(path, cinfo)
 
