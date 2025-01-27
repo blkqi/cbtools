@@ -11,11 +11,6 @@ import dictdiffer
 from cbtools import AniList, CBZFile, ComicInfo
 from glob import glob
 
-def print_cinfo_diff(left, right):
-    result = dictdiffer.diff(left, right)
-    for item in result:
-        print(item)
-
 def replace_cfile_cinfo(path, cinfo):
     with tempfile.TemporaryDirectory() as tempdir:
         temppath = pathlib.Path(tempdir) / 'cbz'
@@ -45,7 +40,7 @@ def cbtag(files, series_id, dryrun):
           cinfo['Volume'] = cfile.volume
 
           if dryrun:
-              print_cinfo_diff(cfile.info, cinfo)
+                cfile.info.compare(cinfo)
           else:
               replace_cfile_cinfo(path, cinfo)
 
