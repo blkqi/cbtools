@@ -15,8 +15,6 @@ import dictdiffer
 
 from cbtools import CBZFile, ComicInfo
 from glob import glob
-from os import listdir
-from os.path import isfile, join
 
 ANILIST_COMICINFO_JMESMAP = {
     'Series': 'title.romaji',
@@ -135,8 +133,7 @@ def replace_cfile_cinfo(path, cinfo):
         temppath.unlink()
 
 def cbtag(folder, series_id, dryrun):
-    files = [join(folder, f) for f in listdir(folder) if isfile(
-        join(folder, f)) and f.lower().endswith('.cbz')]
+    files = [f for f in folder.iterdir() if f.is_file() and f.suffix.lower() == '.cbz']
     cinfo = construct_cinfo(anilist_search(series_id).get('data', {}).get('Media', {}))
 
     for path in files:
