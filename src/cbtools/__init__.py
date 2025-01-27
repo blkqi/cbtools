@@ -1,4 +1,3 @@
-
 import jmespath
 import lxml.etree
 import re
