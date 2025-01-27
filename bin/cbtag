@@ -20,8 +20,15 @@ def cbtag(files, series_id, dryrun):
             if cfile.volume:
                 cinfo['Volume'] = cfile.volume
 
+            diff = cfile.info.compare(cinfo)
+
+            if not diff:
+                print(f'{path}: no changes required')
+                continue
+
             if dryrun:
-                cfile.info.compare(cinfo)
+                for item in diff:
+                    print(item)
             else:
                 cfile.update_cinfo(cinfo)
 
