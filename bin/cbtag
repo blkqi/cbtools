@@ -7,6 +7,8 @@ import jmespath
 import requests
 import argparse
 
+from cbtools import ComicInfo
+
 ANILIST_COMICINFO_JMESMAP = {
     'Series': 'title.romaji',
     'LocalizedSeries': 'title.english',
@@ -76,19 +78,19 @@ def get_series_info_by_id(series_id):
     return response.json()
 
 def map(anilist_data):
-    data = {}
+    cinfo = ComicInfo()
 
     if not anilist_data:
-        return data
+        return cinfo
 
     for comicinfo_key, anilist_key in ANILIST_COMICINFO_JMESMAP.items():
-        data[comicinfo_key] = jmespath.search(anilist_key, anilist_data)
+        cinfo[comicinfo_key] = jmespath.search(anilist_key, anilist_data)
 
-    return data
+    return cinfo
 
 def cbtag(series_id, dryrun):
-    data = get_series_info_by_id(series_id).get('data', {}).get('Media', {})
-    print(json.dumps(map(data), indent=2))
+    cinfo = map(get_series_info_by_id(series_id).get('data', {}).get('Media', {}))
+    print(json.dumps(cinfo, indent=2))
 
 def main():
     parser = argparse.ArgumentParser(prog='cbtag')
