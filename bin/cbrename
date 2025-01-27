@@ -51,9 +51,8 @@ def renamepath(src, dst):
 
 def cbrename(files, pattern, root, validate, dryrun):
     renamer = CBZRenamer(pattern)
-    inpaths = (pathlib.Path(f) for f in files)
 
-    for srcpath in inpaths:
+    for srcpath in (pathlib.Path(f) for f in files):
         with CBZFile(srcpath) as cbzfile:
             dstpath = renamer.fullpath(cbzfile, root=root)
 
