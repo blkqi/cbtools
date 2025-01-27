@@ -1,0 +1,38 @@
+query search_details_by_series_id ($series_id: Int, $format: MediaFormat) {
+  Media (id: $series_id, type: MANGA, format: $format) {
+    id
+    volumes
+    siteUrl
+    title {
+      romaji
+      english
+    }
+    studios {
+      edges {
+        node {
+          name
+        }
+      }
+    }
+    staff {
+      edges {
+        role
+        node {
+          name {
+            full
+          }
+        }
+      }
+    }
+    genres
+    tags {
+      name
+    }
+    description
+    startDate {
+      day
+      month
+      year
+    }
+  }
+}

@@ -7,6 +7,7 @@ import requests
 import shutil
 import tempfile
 import zipfile
+import importlib.resources
 
 class AniList:
     def __init__(self):
@@ -14,46 +15,7 @@ class AniList:
 
     def search(self, series_id):
         media_format = 'MANGA'
-        query = '''
-                query search_details_by_series_id ($series_id: Int, $format: MediaFormat) {
-                Media (id: $series_id, type: MANGA, format: $format) {
-                    id
-                    volumes
-                    siteUrl
-                    title {
-                    romaji
-                    english
-                    }
-                    studios {
-                    edges {
-                        node {
-                        name
-                        }
-                    }
-                    }
-                    staff {
-                    edges {
-                        role
-                        node {
-                        name {
-                            full
-                        }
-                        }
-                    }
-                    }
-                    genres
-                    tags {
-                    name
-                    }
-                    description
-                    startDate {
-                    day
-                    month
-                    year
-                    }
-                }
-                }
-                '''
+        query = importlib.resources.files(__name__).joinpath('anilistid.gql').open().read()
         variables = {
             'series_id': series_id,
             'format': media_format
