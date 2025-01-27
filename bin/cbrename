@@ -56,7 +56,9 @@ def cbrename(files, pattern, root, validate, dryrun):
         with CBZFile(srcpath) as cbzfile:
             dstpath = renamer.fullpath(cbzfile, root=root)
 
-        if dryrun:
+        if srcpath == dstpath:
+            continue
+        elif dryrun:
             print(f'(dryrun) "{srcpath}" -> "{dstpath}"')
         else:
             renamepath(srcpath, dstpath)
