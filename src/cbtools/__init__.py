@@ -8,12 +8,8 @@ class ComicInfo(dict):
     def __init__(self, *args, **kwds):
         super(ComicInfo, self).__init__(*args, **kwds)
 
-    def parse(f, validate=False):
+    def parse(f):
         tree = lxml.etree.parse(f)
-
-        # TODO allow injecting default values into validated documents
-        if validate:
-            ComicInfo.validate(tree)
 
         return ComicInfo((child.tag, child.text) for child in tree.getroot())
 
@@ -33,10 +29,10 @@ class CBZFile(zipfile.ZipFile):
     def __init__(self, file, **kwds):
         super(CBZFile, self).__init__(file, **kwds)
 
-    def info(self, validate=False):
+    def info(self):
         try:
             with self.open(ComicInfo.XML_FILENAME) as c:
-                return ComicInfo.parse(c, validate=validate)
+                return ComicInfo.parse(c)
         except KeyError:
             pass
 
