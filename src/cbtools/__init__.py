@@ -55,7 +55,7 @@ class AniListResponse(dict):
         return cinfo
 
 class ComicInfo(dict):
-    XSD_FILENAME = 'ComicInfo.xsd'
+    XSD_FILENAME = importlib.resources.files(__name__).joinpath('ComicInfo.xsd')
     XML_FILENAME = 'ComicInfo.xml'
 
     def __init__(self, *args, **kwds):
