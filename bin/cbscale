@@ -4,13 +4,11 @@ import os
 import sys
 import shutil
 import pathlib
-import platform
 import argparse
 import tempfile
 import subprocess
 
-from cbtools import CBZFile, ComicInfo
-from glob import glob
+from cbtools import CBZFile, ComicInfo, expand_paths
 
 WAIFU2X_BIN = os.getenv('WAIFU2X_BIN', '/usr/bin/waifu2x-ncnn-vulkan')
 WAIFU2X_MODEL = os.getenv('WAIFU2X_MODEL', '/usr/share/waifu2x-ncnn-vulkan/models-upconv_7_anime_style_art_rgb')
@@ -64,8 +62,7 @@ def upscale(cfile, scale, noise, ftype, gpuid,
                 cfile.write(path, arcname=path.name)
 
 def cbscale(files, **kwds):
-    if platform.system() == 'Windows':
-        files = [f for e in files for f in glob(e)]
+    files = expand_paths(files)
 
     for path in files:
         with CBZFile(path) as cfile:
