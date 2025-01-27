@@ -28,7 +28,7 @@ def cbtag(files, series_id, dryrun):
 def main():
     parser = argparse.ArgumentParser(prog='cbtag')
     parser.add_argument('files', nargs='*', type=pathlib.Path)
-    parser.add_argument('--series-id', type=int, required=True)
+    parser.add_argument('--anilist', dest='series_id', type=int, required=True)
     parser.add_argument('--dryrun', action='store_true')
     args = parser.parse_args()
 
