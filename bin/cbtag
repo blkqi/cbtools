@@ -1,151 +1,28 @@
 #!/usr/bin/env python
 
-import os
 import sys
-import json
-import shutil
 import pathlib
 import platform
-import tempfile
-import jmespath
-import re
-import requests
 import argparse
-import dictdiffer
 
-from cbtools import CBZFile, ComicInfo
+from cbtools import AniList, CBZFile, ComicInfo
 from glob import glob
-
-ANILIST_COMICINFO_JMESMAP = {
-    'Series': 'title.romaji',
-    'LocalizedSeries': 'title.english',
-    'Count': 'volumes',
-    'Writer': 'staff.edges[?role.contains(@, `Story`)].node.name.full | [0]',
-    'Penciller': 'staff.edges[?role.contains(@, `Art`)].node.name.full | [0]',
-    'Inker': 'staff.edges[?role.contains(@, `Art`)].node.name.full | [0]',
-    'Colorist': 'staff.edges[?role.contains(@, `Art`)].node.name.full | [0]',
-    'CoverArtist': 'staff.edges[?role.contains(@, `Art`)].node.name.full | [0]',
-    'Publisher': 'studios.edges[?isMain==true].node.name | [0]',
-    'Genre': 'genres[*] | join(`,`, @)',
-    'Tags': 'tags[*].name | join(`,`, @)',
-    'Summary': 'description',
-    'Web': 'siteUrl',
-    'Year': 'startDate.year',
-    'Month': 'startDate.month',
-    'Day': 'startDate.day',
-}
-
-def anilist_search(series_id):
-    url = 'https://graphql.anilist.co'
-    media_format = 'MANGA'
-    query = '''
-            query search_details_by_series_id ($series_id: Int, $format: MediaFormat) {
-              Media (id: $series_id, type: MANGA, format: $format) {
-                id
-                volumes
-                siteUrl
-                title {
-                  romaji
-                  english
-                }
-                studios {
-                  edges {
-                    node {
-                      name
-                    }
-                  }
-                }
-                staff {
-                  edges {
-                    role
-                    node {
-                      name {
-                        full
-                      }
-                    }
-                  }
-                }
-                genres
-                tags {
-                  name
-                }
-                description
-                startDate {
-                  day
-                  month
-                  year
-                }
-              }
-            }
-            '''
-    variables = {
-        'series_id': series_id,
-        'format': media_format
-    }
-    response = requests.post(url, json={'query': query, 'variables': variables})
-    return response.json()
-
-def construct_cinfo(anilist_data):
-    cinfo = ComicInfo()
-
-    if not anilist_data:
-        return cinfo
-
-    for comicinfo_key, anilist_key in ANILIST_COMICINFO_JMESMAP.items():
-        value = jmespath.search(anilist_key, anilist_data)
-        if value:
-            cinfo[comicinfo_key] = str(value)
-
-    return cinfo
-
-def parse_volume(filename):
-    filename_parts = filename.split(' ')
-    filename_parts.reverse()
-
-    for part in filename_parts:
-        found = re.search(r'^[vV]{1}\d+$', part)
-
-        if found:
-          return str(int(found.group(0)[1:]))
-
-    print(f'Could not parse volume from filename: {filename}')
-
-def print_cinfo_diff(left, right):
-    result = dictdiffer.diff(left, right)
-    for item in result:
-        print(item)
-
-def replace_cfile_cinfo(path, cinfo):
-    with tempfile.TemporaryDirectory() as tempdir:
-        temppath = pathlib.Path(tempdir) / 'cbz'
-
-        with CBZFile(path, mode='r') as cbzread, \
-                CBZFile(temppath, mode='w') as cbzwrite:
-
-            cbzwrite.writestr(ComicInfo.XML_FILENAME, cinfo.encode())
-
-            for item in cbzread.infolist():
-                if item.filename != ComicInfo.XML_FILENAME:
-                    data = cbzread.read(item.filename)
-                    cbzwrite.writestr(item, data)
-
-        shutil.copyfile(temppath, path)
-        temppath.unlink()
 
 def cbtag(files, series_id, dryrun):
     if platform.system() == 'Windows':
         files = [f for e in files for f in glob(str(e))]
 
-    cinfo = construct_cinfo(anilist_search(series_id).get('data', {}).get('Media', {}))
+    anilist = AniList()
+    cinfo = anilist.search(series_id).to_cinfo()
 
     for path in files:
         with CBZFile(path) as cfile:
-          cinfo['Volume'] = parse_volume(cfile.filename)
+          cinfo['Volume'] = cfile.volume
 
           if dryrun:
-              print_cinfo_diff(cfile.info(), cinfo)
+              cfile.info.compare(cinfo)
           else:
-              replace_cfile_cinfo(path, cinfo)
+              cfile.update_cinfo(cinfo)
 
 def main():
     parser = argparse.ArgumentParser(prog='cbtag')
