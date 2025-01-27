@@ -1,5 +1,93 @@
-import zipfile
+
+import jmespath
 import lxml.etree
+import re
+import requests
+import zipfile
+
+class AniList:
+    def __init__(self):
+        self.api_url = 'https://graphql.anilist.co'
+
+    def search(self, series_id):
+        media_format = 'MANGA'
+        query = '''
+                query search_details_by_series_id ($series_id: Int, $format: MediaFormat) {
+                Media (id: $series_id, type: MANGA, format: $format) {
+                    id
+                    volumes
+                    siteUrl
+                    title {
+                    romaji
+                    english
+                    }
+                    studios {
+                    edges {
+                        node {
+                        name
+                        }
+                    }
+                    }
+                    staff {
+                    edges {
+                        role
+                        node {
+                        name {
+                            full
+                        }
+                        }
+                    }
+                    }
+                    genres
+                    tags {
+                    name
+                    }
+                    description
+                    startDate {
+                    day
+                    month
+                    year
+                    }
+                }
+                }
+                '''
+        variables = {
+            'series_id': series_id,
+            'format': media_format
+        }
+        response = requests.post(self.api_url, json={'query': query, 'variables': variables})
+        return AniListResponse(response.json())
+
+class AniListResponse(dict):
+    ANILIST_COMICINFO_JMESMAP = {
+        'Series': 'title.romaji',
+        'LocalizedSeries': 'title.english',
+        'Count': 'volumes',
+        'Writer': 'staff.edges[?role.contains(@, `Story`)].node.name.full | [0]',
+        'Penciller': 'staff.edges[?role.contains(@, `Art`)].node.name.full | [0]',
+        'Inker': 'staff.edges[?role.contains(@, `Art`)].node.name.full | [0]',
+        'Colorist': 'staff.edges[?role.contains(@, `Art`)].node.name.full | [0]',
+        'CoverArtist': 'staff.edges[?role.contains(@, `Art`)].node.name.full | [0]',
+        'Publisher': 'studios.edges[?isMain==true].node.name | [0]',
+        'Genre': 'genres[*] | join(`,`, @)',
+        'Tags': 'tags[*].name | join(`,`, @)',
+        'Summary': 'description',
+        'Web': 'siteUrl',
+        'Year': 'startDate.year',
+        'Month': 'startDate.month',
+        'Day': 'startDate.day',
+    }
+
+    def to_cinfo(self):
+        cinfo = ComicInfo()
+        data = self.get('data', {}).get('Media', {})
+
+        if not data:
+            return cinfo
+
+        cinfo.map(data, self.ANILIST_COMICINFO_JMESMAP)
+
+        return cinfo
 
 class ComicInfo(dict):
     XSD_FILENAME = 'ComicInfo.xsd'
@@ -25,9 +113,18 @@ class ComicInfo(dict):
         xsd_tree = lxml.etree.parse(ComicInfo.XSD_FILENAME)
         lxml.etree.XMLSchema(xsd_tree).assertValid(tree)
 
+    def map(self, source, jmesmap):
+        for target_key, source_key in jmesmap.items():
+            value = jmespath.search(source_key, source)
+
+            if value:
+                self[target_key] = str(value)
+
 class CBZFile(zipfile.ZipFile):
     def __init__(self, file, **kwds):
         super(CBZFile, self).__init__(file, **kwds)
+        self.info = self._get_info()
+        self.volume = self._parse_volume()
 
     def info(self):
         try:
@@ -49,3 +146,22 @@ class CBZFile(zipfile.ZipFile):
             member.filename = member.filename.replace('/', '__')
 
             self.extract(member, path)
+
+    def _get_info(self):
+        try:
+            with self.open(ComicInfo.XML_FILENAME) as c:
+                return ComicInfo.parse(c)
+        except KeyError:
+            pass
+
+        return ComicInfo()
+
+    def _parse_volume(self):
+        filename_parts = self.filename.split(' ')
+        filename_parts.reverse()
+
+        for part in filename_parts:
+            found = re.search(r'^[vV]{1}\d+$', part)
+
+            if found:
+                return str(int(found.group(0)[1:]))
