@@ -139,12 +139,13 @@ def cbtag(files, series_id, dryrun):
     cinfo = construct_cinfo(anilist_search(series_id).get('data', {}).get('Media', {}))
 
     for path in files:
-        if dryrun:
-            with CBZFile(path) as cfile:
-                cinfo['Volume'] = parse_volume(cfile.filename)
-                print_cinfo_diff(cfile.info(), cinfo)
-        else:
-            replace_cfile_cinfo(path, cinfo)
+        with CBZFile(path) as cfile:
+          cinfo['Volume'] = parse_volume(cfile.filename)
+
+          if dryrun:
+                  print_cinfo_diff(cfile.info(), cinfo)
+          else:
+              replace_cfile_cinfo(path, cinfo)
 
 def main():
     parser = argparse.ArgumentParser(prog='cbtag')
