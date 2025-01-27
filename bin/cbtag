@@ -3,11 +3,13 @@
 import os
 import sys
 import json
+import pathlib
 import jmespath
 import requests
 import argparse
+import dictdiffer
 
-from cbtools import ComicInfo
+from cbtools import CBZFile, ComicInfo
 
 ANILIST_COMICINFO_JMESMAP = {
     'Series': 'title.romaji',
@@ -77,23 +79,48 @@ def get_series_info_by_id(series_id):
     response = requests.post(url, json={'query': query, 'variables': variables})
     return response.json()
 
-def map(anilist_data):
+def map_result(anilist_data):
     cinfo = ComicInfo()
 
     if not anilist_data:
         return cinfo
 
     for comicinfo_key, anilist_key in ANILIST_COMICINFO_JMESMAP.items():
-        cinfo[comicinfo_key] = jmespath.search(anilist_key, anilist_data)
+        value = jmespath.search(anilist_key, anilist_data)
+        if value:
+            cinfo[comicinfo_key] = str(value)
 
     return cinfo
 
-def cbtag(series_id, dryrun):
-    cinfo = map(get_series_info_by_id(series_id).get('data', {}).get('Media', {}))
-    print(json.dumps(cinfo, indent=2))
+def print_cinfo_diff(left, right):
+    result = dictdiffer.diff(left, right)
+    for item in result:
+        print(item)
+
+def cbtag(files, series_id, dryrun):
+    cinfo = map_result(get_series_info_by_id(series_id).get('data', {}).get('Media', {}))
+
+    #data = cinfo.encode(pretty_print=True)
+    #sys.stdout.buffer.write(data)
+    #print(json.dumps(cinfo, indent=2))
+
+    for path in files:
+        with CBZFile(path) as cbzfile:
+            old_cinfo = cbzfile.info()
+
+            #data = old_cinfo.encode(pretty_print=True)
+            #sys.stdout.buffer.write(data)
+            #print(json.dumps(old_cinfo, indent=2))
+
+            # TODO Overwrite ComicInfo.xml in archive.
+            #      Not directly supports by ZipFile!
+
+            if dryrun:
+                print_cinfo_diff(old_cinfo, cinfo)
 
 def main():
     parser = argparse.ArgumentParser(prog='cbtag')
+    parser.add_argument('files', nargs='*', type=pathlib.Path)
     parser.add_argument('--series-id', type=int, default=33614)
     parser.add_argument('--dryrun', action='store_true')
     args = parser.parse_args()
