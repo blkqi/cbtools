@@ -7,7 +7,7 @@ import shutil
 import pathlib
 import argparse
 
-from cbtools import CBZFile
+from cbtools import CBZFile, expand_paths
 
 ARG_PATTERN_DEFAULT = '${Series} (${Year})/${Series} ${Volume}'
 
@@ -50,6 +50,7 @@ class CBZRenamer(object):
         src.unlink()
 
 def cbrename(files, pattern, root, validate, dryrun):
+    files = expand_paths(files)
     renamer = CBZRenamer(pattern)
 
     for path in files:

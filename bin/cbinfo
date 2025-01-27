@@ -6,9 +6,11 @@ import json
 import pathlib
 import argparse
 
-from cbtools import CBZFile
+from cbtools import CBZFile, expand_paths
 
 def cbinfo(files):
+    files = expand_paths(files)
+
     for path in files:
         with CBZFile(path) as cfile:
             print(json.dumps(cfile.info, indent=2))
