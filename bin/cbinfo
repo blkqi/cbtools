@@ -9,13 +9,13 @@ import argparse
 from cbtools import CBZFile
 
 def cbinfo(files):
-    for path in (pathlib.Path(f) for f in files):
+    for path in files:
         with CBZFile(path) as cbzfile:
             print(json.dumps(cbzfile.info(), indent=2))
 
 def main():
     parser = argparse.ArgumentParser(prog='cbinfo')
-    parser.add_argument('files', nargs='+')
+    parser.add_argument('files', nargs='+', type=pathlib.Path)
     args = parser.parse_args()
 
     try:
