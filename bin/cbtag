@@ -7,6 +7,7 @@ import shutil
 import pathlib
 import tempfile
 import jmespath
+import re
 import requests
 import argparse
 import dictdiffer
@@ -21,6 +22,7 @@ ANILIST_COMICINFO_JMESMAP = {
     'Penciller': 'staff.edges[?role.contains(@, `Art`)].node.name.full | [0]',
     'Inker': 'staff.edges[?role.contains(@, `Art`)].node.name.full | [0]',
     'Colorist': 'staff.edges[?role.contains(@, `Art`)].node.name.full | [0]',
+    'CoverArtist': 'staff.edges[?role.contains(@, `Art`)].node.name.full | [0]',
     'Publisher': 'studios.edges[?isMain==true].node.name | [0]',
     'Genre': 'genres[*] | join(`,`, @)',
     'Tags': 'tags[*].name | join(`,`, @)',
@@ -94,6 +96,18 @@ def construct_cinfo(anilist_data):
 
     return cinfo
 
+def parse_volume(filename):
+    filename_parts = filename.split(' ')
+    filename_parts.reverse()
+
+    for part in filename_parts:
+        found = re.search(r'^[vV]{1}\d+$', part)
+
+        if found:
+          return str(int(found.group(0)[1:]))
+
+    print(f'Could not parse volume from filename: {filename}')
+
 def print_cinfo_diff(left, right):
     result = dictdiffer.diff(left, right)
     for item in result:
@@ -122,6 +136,7 @@ def cbtag(files, series_id, dryrun):
     for path in files:
         if dryrun:
             with CBZFile(path) as cfile:
+                cinfo['Volume'] = parse_volume(cfile.filename)
                 print_cinfo_diff(cfile.info(), cinfo)
         else:
             replace_cfile_cinfo(path, cinfo)
