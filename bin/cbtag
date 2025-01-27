@@ -4,6 +4,7 @@ import os
 import sys
 import json
 import pathlib
+import tempfile
 import jmespath
 import requests
 import argparse
@@ -97,18 +98,45 @@ def print_cinfo_diff(left, right):
     for item in result:
         print(item)
 
+def replace_cfile_cinfo(cfile_path, cinfo_path):
+    # create temp space for extraction
+    with tempfile.TemporaryDirectory() as extract_dir:
+        extract_path = pathlib.Path(extract_dir)
+
+        # extract original archive
+        with CBZFile(cfile_path, mode='r') as cfile:
+            cfile.extractall(path=extract_path, flatten=True)
+
+        # remove previous ComicInfo.xml, if it exists
+        (extract_path / ComicInfo.XML_FILENAME).unlink(missing_ok=True)
+
+        # write new archive with new ComicInfo.xml
+        cfile_temp_path = cfile_path.with_suffix('.cbz.tmp')
+
+        with CBZFile(cfile_temp_path, mode='w') as cfile_temp:
+            cfile_temp.write(cinfo_path, arcname=ComicInfo.XML_FILENAME)
+
+            for path in sorted(extract_path.iterdir()):
+                cfile_temp.write(path, arcname=path.name)
+
+        # replace original archive
+        cfile_temp_path.rename(cfile_path)
+
 def cbtag(files, series_id, dryrun):
     cinfo = map_result(get_series_info_by_id(series_id).get('data', {}).get('Media', {}))
 
-    for path in files:
-        with CBZFile(path) as cbzfile:
-            old_cinfo = cbzfile.info()
+    if dryrun:
+        for path in files:
+            with CBZFile(path) as cfile:
+                print_cinfo_diff(cfile.info(), cinfo)
+    else:
+        with tempfile.TemporaryDirectory() as cinfo_dir:
+            # write new ComicInfo.xml
+            cinfo_path = pathlib.Path(cinfo_dir) / ComicInfo.XML_FILENAME
+            cinfo_path.write_bytes(cinfo.encode())
 
-            # TODO Overwrite ComicInfo.xml in archive.
-            #      Not directly supports by ZipFile!
-
-            if dryrun:
-                print_cinfo_diff(old_cinfo, cinfo)
+            for path in files:
+                replace_cfile_cinfo(path, cinfo_path)
 
 def main():
     parser = argparse.ArgumentParser(prog='cbtag')
