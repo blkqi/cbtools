@@ -2,12 +2,15 @@ import dictdiffer
 import jmespath
 import lxml.etree
 import pathlib
+import platform
 import re
 import requests
 import shutil
 import tempfile
 import zipfile
 import importlib.resources
+
+from glob import glob
 
 class AniList:
     def __init__(self):
@@ -80,8 +83,7 @@ class ComicInfo(dict):
 
     def compare(self, with_data):
         result = dictdiffer.diff(self, with_data)
-        for item in result:
-            print(item)
+        return list(result)
 
     def map(self, source, jmesmap):
         for target_key, source_key in jmesmap.items():
@@ -113,7 +115,6 @@ class CBZFile(zipfile.ZipFile):
             temppath = pathlib.Path(tempdir) / 'cbz'
 
             with CBZFile(temppath, mode='w') as cbzwrite:
-
                 cbzwrite.writestr(ComicInfo.XML_FILENAME, cinfo.encode())
 
                 for item in self.infolist():
@@ -142,3 +143,9 @@ class CBZFile(zipfile.ZipFile):
 
             if found:
                 return str(int(found.group(0)[1:]))
+
+def expand_paths(paths):
+    if platform.system() != 'Windows':
+        return paths
+
+    return [f for e in paths for f in glob(str(e))]
