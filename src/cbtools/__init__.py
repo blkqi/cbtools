@@ -151,7 +151,6 @@ class CBZFile(zipfile.ZipFile):
             temppath = pathlib.Path(tempdir) / 'cbz'
 
             with CBZFile(temppath, mode='w') as cbzwrite:
-
                 cbzwrite.writestr(ComicInfo.XML_FILENAME, cinfo.encode())
 
                 for item in self.infolist():
