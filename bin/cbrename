@@ -18,8 +18,8 @@ class CBZRenamer(object):
         self._template = string.Template(pattern)
         self._defaults = {key: default for key in self._template.get_identifiers()}
 
-    def _substitute(self, cbzfile):
-        info = cbzfile.info()
+    def _substitute(self, cfile):
+        info = cfile.info()
         formatters = {'Series': lambda x: f'{x}',
                       'Volume': lambda x: f'V{int(x):02}',
                       'Writer': lambda x: f'{x}',
@@ -27,41 +27,41 @@ class CBZRenamer(object):
         inputs = {key: fun(info.get(key)) for key, fun in formatters.items() if key in info}
         return self._template.substitute(self._defaults, **inputs).strip()
 
-    def fullpath(self, cbzfile, root=pathlib.Path('')):
-        path = pathlib.Path(self._substitute(cbzfile))
+    def path(self, cfile, root=pathlib.Path('')):
+        path = pathlib.Path(self._substitute(cfile))
         return (root / path).with_suffix(self.FILENAME_SUFFIX)
 
-def renamepath(src, dst):
-    # create required directory structure
-    dst.parent.mkdir(parents=True, exist_ok=True)
+    def rename(src, dst):
+        # create required directory structure
+        dst.parent.mkdir(parents=True, exist_ok=True)
 
-    try:
-        src.rename(dst)
-    except OSError as e:
-        if e.errno == 18:
-            pass
+        try:
+            src.rename(dst)
+        except OSError as e:
+            if e.errno == 18:
+                pass
+            else:
+                raise
         else:
-            raise
-    else:
-        return
+            return
 
-    # errno 18: target filesystem differs - fallback to copy file
-    shutil.copyfile(src, dst)
-    src.unlink()
+        # errno 18: target filesystem differs - fallback to copy file
+        shutil.copyfile(src, dst)
+        src.unlink()
 
 def cbrename(files, pattern, root, validate, dryrun):
     renamer = CBZRenamer(pattern)
 
-    for srcpath in files:
-        with CBZFile(srcpath) as cbzfile:
-            dstpath = renamer.fullpath(cbzfile, root=root)
+    for path in files:
+        with CBZFile(path) as cfile:
+            newpath = renamer.path(cfile, root=root)
 
-        if srcpath == dstpath:
+        if path == newpath:
             continue
         elif dryrun:
-            print(f'(dryrun) "{srcpath}" -> "{dstpath}"')
+            print(f'(dryrun) "{path}" -> "{newpath}"')
         else:
-            renamepath(srcpath, dstpath)
+            CBZRenamer.rename(path, newpath)
 
 def main():
     parser = argparse.ArgumentParser(prog='cbrename')
