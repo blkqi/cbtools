@@ -16,13 +16,13 @@ WAIFU2X_BIN = os.getenv('WAIFU2X_BIN', '/usr/bin/waifu2x-ncnn-vulkan')
 WAIFU2X_MODEL = os.getenv('WAIFU2X_MODEL', '/usr/share/waifu2x-ncnn-vulkan/models-upconv_7_anime_style_art_rgb')
 OUTFILE_SUFFIX = 'cbscale'
 
-def upscale(cbzfile, scale, noise, ftype, gpuid,
+def upscale(cfile, scale, noise, ftype, gpuid,
             entrypoint=WAIFU2X_BIN, model=WAIFU2X_MODEL):
 
     with tempfile.TemporaryDirectory() as srcdir, \
             tempfile.TemporaryDirectory() as dstdir:
 
-        cbzfile.extractall(path=srcdir, flatten=True)
+        cfile.extractall(path=srcdir, flatten=True)
 
         try:
             process = subprocess.Popen(
@@ -50,26 +50,26 @@ def upscale(cbzfile, scale, noise, ftype, gpuid,
 
         srcpath = pathlib.Path(srcdir)
         dstpath = pathlib.Path(dstdir)
-        outpath = pathlib.Path(cbzfile.filename)
+        outpath = pathlib.Path(cfile.filename)
         outname = f'{outpath.with_suffix('')}_{OUTFILE_SUFFIX}{outpath.suffix}'
 
-        with CBZFile(outname, mode='w') as cbzfile:
+        with CBZFile(outname, mode='w') as cfile:
             # add comicinfo
             path = srcpath / ComicInfo.XML_FILENAME
             if path.exists():
-                cbzfile.write(path, arcname=path.name)
+                cfile.write(path, arcname=path.name)
 
             # add images
             for path in sorted(dstpath.iterdir()):
-                cbzfile.write(path, arcname=path.name)
+                cfile.write(path, arcname=path.name)
 
 def cbscale(files, **kwds):
     if platform.system() == 'Windows':
         files = [f for e in files for f in glob(str(e))]
 
     for path in files:
-        with CBZFile(path) as cbzfile:
-            upscale(cbzfile, **kwds)
+        with CBZFile(path) as cfile:
+            upscale(cfile, **kwds)
 
 def main():
     parser = argparse.ArgumentParser(prog='cbscale')
