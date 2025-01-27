@@ -13,13 +13,13 @@ class ComicInfo(dict):
 
         return ComicInfo((child.tag, child.text) for child in tree.getroot())
 
-    def encode(self, **kwds):
+    def encode(self, pretty_print=True, **kwds):
         root = lxml.etree.Element('ComicInfo')
 
         for name, value in self.items():
             lxml.etree.SubElement(root, name).text = str(value or '')
 
-        return lxml.etree.tostring(root, **kwds)
+        return lxml.etree.tostring(root, pretty_print=pretty_print, **kwds)
 
     def validate(tree):
         xsd_tree = lxml.etree.parse(ComicInfo.XSD_FILENAME)
