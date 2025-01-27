@@ -19,7 +19,7 @@ class CBZRenamer(object):
         self._defaults = {key: default for key in self._template.get_identifiers()}
 
     def _substitute(self, cbzfile):
-        info = cbzfile.info()
+        info = cbzfile.info
         formatters = {'Series': lambda x: f'{x}',
                       'Volume': lambda x: f'V{int(x):02}',
                       'Writer': lambda x: f'{x}',

@@ -11,7 +11,7 @@ from cbtools import CBZFile
 def cbinfo(files):
     for path in files:
         with CBZFile(path) as cbzfile:
-            print(json.dumps(cbzfile.info(), indent=2))
+            print(json.dumps(cbzfile.info, indent=2))
 
 def main():
     parser = argparse.ArgumentParser(prog='cbinfo')
