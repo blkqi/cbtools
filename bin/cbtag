@@ -17,12 +17,13 @@ def cbtag(files, series_id, dryrun):
 
     for path in files:
         with CBZFile(path) as cfile:
-          cinfo['Volume'] = cfile.volume
+            if cfile.volume:
+                cinfo['Volume'] = cfile.volume
 
-          if dryrun:
-              cfile.info.compare(cinfo)
-          else:
-              cfile.update_cinfo(cinfo)
+            if dryrun:
+                cfile.info.compare(cinfo)
+            else:
+                cfile.update_cinfo(cinfo)
 
 def main():
     parser = argparse.ArgumentParser(prog='cbtag')
