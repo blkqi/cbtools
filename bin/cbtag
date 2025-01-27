@@ -5,6 +5,7 @@ import sys
 import json
 import shutil
 import pathlib
+import platform
 import tempfile
 import jmespath
 import re
@@ -13,6 +14,7 @@ import argparse
 import dictdiffer
 
 from cbtools import CBZFile, ComicInfo
+from glob import glob
 
 ANILIST_COMICINFO_JMESMAP = {
     'Series': 'title.romaji',
@@ -131,6 +133,9 @@ def replace_cfile_cinfo(path, cinfo):
         temppath.unlink()
 
 def cbtag(files, series_id, dryrun):
+    if platform.system() == 'Windows':
+        files = [f for e in files for f in glob(str(e))]
+
     cinfo = construct_cinfo(anilist_search(series_id).get('data', {}).get('Media', {}))
 
     for path in files:

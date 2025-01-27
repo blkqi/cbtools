@@ -65,7 +65,7 @@ def upscale(cbzfile, scale, noise, ftype, gpuid,
 
 def cbscale(files, **kwds):
     if platform.system() == 'Windows':
-        files = [f for e in files for f in glob(e)]
+        files = [f for e in files for f in glob(str(e))]
 
     for path in files:
         with CBZFile(path) as cbzfile:
