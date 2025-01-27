@@ -125,15 +125,6 @@ class CBZFile(zipfile.ZipFile):
         self.info = self._get_info()
         self.volume = self._parse_volume()
 
-    def info(self):
-        try:
-            with self.open(ComicInfo.XML_FILENAME) as c:
-                return ComicInfo.parse(c)
-        except KeyError:
-            pass
-
-        return ComicInfo()
-
     def extractall(self, path=None, members=None, pwd=None, flatten=False):
         if not flatten:
             return super().extractall(path=path, members=members, pwd=pwd)
