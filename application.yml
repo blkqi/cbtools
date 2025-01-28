@@ -1,0 +1,85 @@
+kavita:
+  baseUri: "http://192.168.1.2:9011"
+  apiKey: "dc62ce9f-42d8-4ff8-beeb-f3ec38d7969f"
+  eventListener:
+    enabled: true
+    metadataLibraryFilter: [ ]
+    metadataSeriesExcludeFilter: [ ]
+    notificationsLibraryFilter: [ ]
+  metadataUpdate:
+    default:
+      libraryType: "MANGA"
+      updateModes: [ API ]
+      aggregate: false
+      mergeTags: false
+      mergeGenres: false
+      bookCovers: true
+      seriesCovers: true
+      overrideExistingCovers: true
+      lockCovers: true
+      seriesMetadata:
+        status: true
+        title: false
+        titleSort: false
+        summary: false
+        publisher: true
+        readingDirection: true
+        ageRating: true
+        language: true
+        genres: false
+        tags: false
+        totalBookCount: true
+        authors: false
+        thumbnail: true
+        releaseDate: true
+        links: true
+        score: true
+        books: false
+        useOriginalPublisher: true
+    library:
+      6:
+        seriesMetadata:
+          status: true
+          title: true
+          titleSort: true
+          summary: true
+          publisher: true
+          readingDirection: true
+          ageRating: true
+          language: true
+          genres: true
+          tags: true
+          totalBookCount: true
+          authors: true
+          thumbnail: true
+          releaseDate: true
+          links: true
+          score: true
+          books: true
+          useOriginalPublisher: true
+        postProcessing:
+          seriesTitle: true
+          seriesTitleLanguage: "en"
+          alternativeSeriesTitles: true
+          alternativeSeriesTitleLanguages:
+            - "ja-ro"
+          orderBooks: false
+database:
+  file: "/config/database.sqlite"
+metadataProviders:
+  malClientId: "17d1bfff7a0c2763063c69d73b8b8440"
+  defaultProviders:
+    aniList:
+      priority: 10
+      enabled: true
+      mediaType: "MANGA"
+    mal:
+      priority: 20
+      enabled: true
+      mediaType: "MANGA"
+    mangaUpdates:
+      priority: 30
+      enabled: true
+      mediaType: "MANGA"
+      authorRoles: [ "WRITER" ]
+      artistRoles: [ "PENCILLER","INKER","COLORIST","LETTERER","COVER" ]
