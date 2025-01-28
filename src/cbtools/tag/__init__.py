@@ -44,12 +44,9 @@ class AniList:
             'series_id': series_id,
             'format': media_format
         }
-        response = self.session.post(self.api_url, json={'query': query, 'variables': variables})
 
-        try:
-            response.raise_for_status()
-        except HTTPError as e:
-            raise e
+        response = self.session.post(self.api_url, json={'query': query, 'variables': variables})
+        response.raise_for_status()
 
         return AniListResponse(response.json())
 
