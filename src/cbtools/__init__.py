@@ -31,6 +31,7 @@ class AniList:
         elif response.status_code == 429:
             wait = int(response.headers['Retry-After'])
             time.sleep(wait+1)
+            # TODO: this could loop forever
             return self.search(series_id)
         else:
             # TODO: handle error response?
