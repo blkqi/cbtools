@@ -8,6 +8,3 @@ COPY src/cbtools src/cbtools
 COPY setup.py setup.py
 
 RUN pip install /app --no-input --break-system-packages
-
-ENV PUID=99
-ENV PGID=100
