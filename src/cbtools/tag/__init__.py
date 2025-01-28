@@ -7,31 +7,26 @@ import cbtools.tag.extensions
 
 from cbtools.core import ComicInfo
 
-class AniListThrottle(object):
-    def __init__(self):
-        pass
-
-    def throttle(self, response):
-        if response.status_code == 429:
-            retry_after = float(response.headers['Retry-After'])
-            time.sleep(retry_after)
-            return False
-
-        return True
-
 class AniListAdapter(requests.adapters.HTTPAdapter):
     def __init__(self, *args, **kwds):
         super().__init__(*args, **kwds)
-        self.throttle = AniListThrottle()
 
     def send(self, request, **kwds):
         while True:
             response = super().send(request, **kwds)
 
-            if self.throttle.throttle(response):
+            if not self._throttle(response):
                 break
 
         return response
+
+    def _throttle(self, response):
+        if response.status_code == 429:
+            period = int(response.headers['Retry-After'])
+            time.sleep(period)
+            return True
+        else:
+            return False
 
 class AniList:
     def __init__(self):
