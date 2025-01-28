@@ -6,5 +6,6 @@ WORKDIR /app
 COPY bin bin
 COPY src/cbtools src/cbtools
 COPY setup.py setup.py
+COPY LICENSE LICENSE
 
 RUN pip install /app --no-input --break-system-packages
