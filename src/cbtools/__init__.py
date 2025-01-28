@@ -12,6 +12,7 @@ import zipfile
 import importlib.resources
 
 from glob import glob
+from cbtag import extensions
 
 class AniList:
     def __init__(self):
@@ -71,10 +72,6 @@ class AniListResponse(dict):
 class ComicInfo(dict):
     XSD_FILENAME = importlib.resources.files(__name__).joinpath('ComicInfo.xsd')
     XML_FILENAME = 'ComicInfo.xml'
-    # TODO: provide these externally
-    EXTENSIONS = [
-        lambda cinfo, data: cinfo.update({'Tags': ','.join([cinfo['Tags'], 'Highly Rated'])}) if data['averageScore'] >= 85 else None,
-    ]
 
     def __init__(self, *args, **kwds):
         super(ComicInfo, self).__init__(*args, **kwds)
@@ -110,8 +107,9 @@ class ComicInfo(dict):
         self._apply_extensions(data)
 
     def _apply_extensions(self, data):
-        for extension in self.EXTENSIONS:
-            extension(self, data)
+        for extension in extensions.__all__:
+            module = importlib.import_module(f'cbtag.extensions.{extension}')
+            module.extension(self, data)
 
 class CBZFile(zipfile.ZipFile):
     def __init__(self, file, **kwds):
