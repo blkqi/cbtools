@@ -1,0 +1,62 @@
+import sys
+import pathlib
+import argparse
+import queue
+import time
+
+from cbtools import AniList, CBZFile, ComicInfo
+
+def cbtag(folder, series_id, dryrun):
+    cinfo = AniList().search(series_id).to_cinfo()
+
+    for path in folder.iterdir():
+        if not path.is_file() or path.suffix != '.cbz':
+            continue
+
+        with CBZFile(path) as cfile:
+            if cfile.volume:
+                cinfo['Volume'] = cfile.volume
+
+            diff = cfile.info.compare(cinfo)
+
+            if not diff:
+                print(f'{path}: no changes required')
+                continue
+
+            if dryrun:
+                for item in diff:
+                    print(item)
+            else:
+                # cfile.update_cinfo(cinfo)
+                pass
+
+def cbtagx(library, dryrun):
+    tag_queue = queue.Queue()
+
+    for folder in library.iterdir():
+        if not folder.is_dir():
+            continue
+
+        tag_queue.put(folder)
+
+    while not my_queue.empty():
+        folder = my_queue.get()
+        series_id = item.name
+        cbtag(folder, series_id, dryrun)
+        time.sleep(2)
+
+def main():
+    parser = argparse.ArgumentParser(prog='cbtag')
+    parser.add_argument('library', type=pathlib.Path)
+    parser.add_argument('--dryrun', action='store_true')
+    args = parser.parse_args()
+
+    try:
+        cbtag(**vars(args))
+    except KeyboardInterrupt:
+        return 1
+
+    return 0
+
+if __name__ == '__main__':
+    sys.exit(main())
