@@ -7,9 +7,35 @@ import cbtools.tag.extensions
 
 from cbtools.core import ComicInfo
 
+class AniListAdapter(requests.adapters.HTTPAdapter):
+    def __init__(self, *args, **kwds):
+        super().__init__(*args, **kwds)
+
+    def send(self, request, **kwds):
+        while True:
+            response = super().send(request, **kwds)
+
+            if not self._throttle(response):
+                break
+
+        return response
+
+    def _throttle(self, response):
+        if response.status_code == 429:
+            period = int(response.headers['Retry-After'])
+            time.sleep(period)
+            return True
+        else:
+            return False
+
 class AniList:
     def __init__(self):
         self.api_url = 'https://graphql.anilist.co'
+
+        adapter = AniListAdapter()
+        self.session = requests.session()
+        self.session.mount('http://', adapter)
+        self.session.mount('https://', adapter)
 
     def search(self, series_id):
         media_format = 'MANGA'
@@ -18,18 +44,11 @@ class AniList:
             'series_id': series_id,
             'format': media_format
         }
-        response = requests.post(self.api_url, json={'query': query, 'variables': variables})
 
-        if response.status_code == 200:
-            return AniListResponse(response.json())
-        elif response.status_code == 429:
-            wait = int(response.headers['Retry-After'])
-            time.sleep(wait+1)
-            # TODO: this could loop forever
-            return self.search(series_id)
-        else:
-            # TODO: handle error response?
-            return AniListResponse({})
+        response = self.session.post(self.api_url, json={'query': query, 'variables': variables})
+        response.raise_for_status()
+
+        return AniListResponse(response.json())
 
 class AniListResponse(dict):
     ANILIST_COMICINFO_JMESMAP = {
