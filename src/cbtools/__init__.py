@@ -71,6 +71,10 @@ class AniListResponse(dict):
 class ComicInfo(dict):
     XSD_FILENAME = importlib.resources.files(__name__).joinpath('ComicInfo.xsd')
     XML_FILENAME = 'ComicInfo.xml'
+    # TODO: provide these externally
+    EXTENSIONS = [
+        lambda cinfo, data: cinfo.update({'Tags': ','.join([cinfo['Tags'], 'Highly Rated'])}) if data['averageScore'] >= 85 else None,
+    ]
 
     def __init__(self, *args, **kwds):
         super(ComicInfo, self).__init__(*args, **kwds)
@@ -96,12 +100,18 @@ class ComicInfo(dict):
         result = dictdiffer.diff(self, with_data)
         return list(result)
 
-    def map(self, source, jmesmap):
+    def map(self, data, jmesmap):
         for target_key, source_key in jmesmap.items():
-            value = jmespath.search(source_key, source)
+            value = jmespath.search(source_key, data)
 
             if value:
                 self[target_key] = str(value)
+
+        self._apply_extensions(data)
+
+    def _apply_extensions(self, data):
+        for extension in self.EXTENSIONS:
+            extension(self, data)
 
 class CBZFile(zipfile.ZipFile):
     def __init__(self, file, **kwds):
