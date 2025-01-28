@@ -7,9 +7,21 @@ import cbtools.tag.extensions
 
 from cbtools.core import ComicInfo
 
+class AniListAdapter(requests.adapters.HTTPAdapter):
+    def __init__(self, *args, **kwds):
+        super().__init__(*args, **kwds)
+
+    def send(self, request, **kwds):
+        return super().send(request, **kwds)
+
 class AniList:
     def __init__(self):
         self.api_url = 'https://graphql.anilist.co'
+
+        adapter = AniListAdapter()
+        self.session = requests.session()
+        self.session.mount('http://', adapter)
+        self.session.mount('https://', adapter)
 
     def search(self, series_id):
         media_format = 'MANGA'
@@ -18,7 +30,7 @@ class AniList:
             'series_id': series_id,
             'format': media_format
         }
-        response = requests.post(self.api_url, json={'query': query, 'variables': variables})
+        response = self.session.post(self.api_url, json={'query': query, 'variables': variables})
 
         if response.status_code == 200:
             return AniListResponse(response.json())
