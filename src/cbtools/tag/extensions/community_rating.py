@@ -2,4 +2,4 @@
 
 def extension(cinfo, data):
     if data['averageScore']:
-        cinfo['CommunityRating'] = data['averageScore'] / 20
+        cinfo['CommunityRating'] = str(round(data['averageScore'] / 20, 1))
