@@ -1,6 +1,6 @@
 FROM binhex/arch-base:latest
 
-RUN pacman -S --needed --noconfirm python-pip waifu2x-ncnn-vulkan
+RUN pacman -S --needed --noconfirm python-pip waifu2x-ncnn-vulkan glslang
 
 WORKDIR /app
 COPY bin bin
