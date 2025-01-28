@@ -2,26 +2,28 @@
 
 import sys
 import pathlib
-import platform
 import argparse
 
-from cbtools import AniList, CBZFile, ComicInfo
-from glob import glob
+from cbtools import AniList, CBZFile, ComicInfo, expand_paths
 
 def cbtag(files, series_id, dryrun):
-    if platform.system() == 'Windows':
-        files = [f for e in files for f in glob(str(e))]
-
-    anilist = AniList()
-    cinfo = anilist.search(series_id).to_cinfo()
+    files = expand_paths(files)
+    cinfo = AniList().search(series_id).to_cinfo()
 
     for path in files:
         with CBZFile(path) as cfile:
             if cfile.volume:
                 cinfo['Volume'] = cfile.volume
 
+            diff = cfile.info.compare(cinfo)
+
+            if not diff:
+                print(f'{path}: no changes required')
+                continue
+
             if dryrun:
-                cfile.info.compare(cinfo)
+                for item in diff:
+                    print(item)
             else:
                 cfile.update_cinfo(cinfo)
 
