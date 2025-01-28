@@ -60,6 +60,7 @@ class AniListResponse(dict):
         'Inker': 'staff.edges[?role.contains(@, `Art`)].node.name.full | [0]',
         'Colorist': 'staff.edges[?role.contains(@, `Art`)].node.name.full | [0]',
         'CoverArtist': 'staff.edges[?role.contains(@, `Art`)].node.name.full | [0]',
+        'Letterer': 'staff.edges[?role.contains(@, `Art`)].node.name.full | [0]',
         'Publisher': 'studios.edges[?isMain==true].node.name | [0]',
         'Genre': 'genres[*] | join(`,`, @)',
         'Tags': 'tags[*].name | join(`,`, @)',
