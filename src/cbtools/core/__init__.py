@@ -1,73 +1,14 @@
 import dictdiffer
-import jmespath
 import lxml.etree
 import pathlib
 import platform
 import re
-import requests
 import shutil
 import tempfile
-import time
 import zipfile
 import importlib.resources
 
 from glob import glob
-from cbtag import extensions
-
-class AniList:
-    def __init__(self):
-        self.api_url = 'https://graphql.anilist.co'
-
-    def search(self, series_id):
-        media_format = 'MANGA'
-        query = importlib.resources.files(__name__).joinpath('anilistid.gql').open().read()
-        variables = {
-            'series_id': series_id,
-            'format': media_format
-        }
-        response = requests.post(self.api_url, json={'query': query, 'variables': variables})
-
-        if response.status_code == 200:
-            return AniListResponse(response.json())
-        elif response.status_code == 429:
-            wait = int(response.headers['Retry-After'])
-            time.sleep(wait+1)
-            # TODO: this could loop forever
-            return self.search(series_id)
-        else:
-            # TODO: handle error response?
-            return AniListResponse({})
-
-class AniListResponse(dict):
-    ANILIST_COMICINFO_JMESMAP = {
-        'Series': 'title.romaji',
-        'LocalizedSeries': 'title.english',
-        'Count': 'volumes',
-        'Writer': 'staff.edges[?role.contains(@, `Story`)].node.name.full | [0]',
-        'Penciller': 'staff.edges[?role.contains(@, `Art`)].node.name.full | [0]',
-        'Inker': 'staff.edges[?role.contains(@, `Art`)].node.name.full | [0]',
-        'Colorist': 'staff.edges[?role.contains(@, `Art`)].node.name.full | [0]',
-        'CoverArtist': 'staff.edges[?role.contains(@, `Art`)].node.name.full | [0]',
-        'Publisher': 'studios.edges[?isMain==true].node.name | [0]',
-        'Genre': 'genres[*] | join(`,`, @)',
-        'Tags': 'tags[*].name | join(`,`, @)',
-        'Summary': 'description',
-        'Web': 'siteUrl',
-        'Year': 'startDate.year',
-        'Month': 'startDate.month',
-        'Day': 'startDate.day',
-    }
-
-    def to_cinfo(self):
-        cinfo = ComicInfo()
-        data = self.get('data', {}).get('Media', {})
-
-        if not data:
-            return cinfo
-
-        cinfo.map(data, self.ANILIST_COMICINFO_JMESMAP)
-
-        return cinfo
 
 class ComicInfo(dict):
     XSD_FILENAME = importlib.resources.files(__name__).joinpath('ComicInfo.xsd')
@@ -96,20 +37,6 @@ class ComicInfo(dict):
     def compare(self, with_data):
         result = dictdiffer.diff(self, with_data)
         return list(result)
-
-    def map(self, data, jmesmap):
-        for target_key, source_key in jmesmap.items():
-            value = jmespath.search(source_key, data)
-
-            if value:
-                self[target_key] = str(value)
-
-        self._apply_extensions(data)
-
-    def _apply_extensions(self, data):
-        for extension in extensions.__all__:
-            module = importlib.import_module(f'cbtag.extensions.{extension}')
-            module.extension(self, data)
 
 class CBZFile(zipfile.ZipFile):
     def __init__(self, file, **kwds):
