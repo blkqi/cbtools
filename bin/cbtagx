@@ -27,8 +27,7 @@ def cbtag(folder, series_id, dryrun):
                 for item in diff:
                     print(item)
             else:
-                # cfile.update_cinfo(cinfo)
-                pass
+                cfile.update_cinfo(cinfo)
 
 def cbtagx(library, dryrun):
     tag_queue = queue.Queue()
@@ -39,10 +38,20 @@ def cbtagx(library, dryrun):
 
         tag_queue.put(folder)
 
-    while not my_queue.empty():
-        folder = my_queue.get()
-        series_id = item.name
-        cbtag(folder, series_id, dryrun)
+    while not tag_queue.empty():
+        folder = tag_queue.get()
+        dotanilist_file = folder / '.anilist.txt'
+
+        if not dotanilist_file.exists():
+            print(f'{folder}: missing .anilist.txt')
+            continue
+
+        with open(dotanilist_file, 'r') as f:
+            series_id = f.read().strip()
+            print(f'{folder}: series_id={series_id}')
+            cbtag(folder, series_id, dryrun)
+
+        # AniList currently permits 30 requests per minute
         time.sleep(2)
 
 def main():
@@ -52,7 +61,7 @@ def main():
     args = parser.parse_args()
 
     try:
-        cbtag(**vars(args))
+        cbtagx(**vars(args))
     except KeyboardInterrupt:
         return 1
 
