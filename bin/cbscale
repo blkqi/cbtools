@@ -8,7 +8,7 @@ import argparse
 import tempfile
 import subprocess
 
-from cbtools import CBZFile, ComicInfo, expand_paths
+from cbtools.core import CBZFile, ComicInfo, expand_paths
 
 WAIFU2X_BIN = os.getenv('WAIFU2X_BIN', '/usr/bin/waifu2x-ncnn-vulkan')
 WAIFU2X_MODEL = os.getenv('WAIFU2X_MODEL', '/usr/share/waifu2x-ncnn-vulkan/models-upconv_7_anime_style_art_rgb')

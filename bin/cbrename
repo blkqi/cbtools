@@ -7,7 +7,7 @@ import shutil
 import pathlib
 import argparse
 
-from cbtools import CBZFile, expand_paths
+from cbtools.core import CBZFile, expand_paths
 
 ARG_PATTERN_DEFAULT = '${Series} (${Year})/${Series} ${Volume}'
 

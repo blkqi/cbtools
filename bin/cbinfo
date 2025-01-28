@@ -6,7 +6,7 @@ import json
 import pathlib
 import argparse
 
-from cbtools import CBZFile, expand_paths
+from cbtools.core import CBZFile, expand_paths
 
 def cbinfo(files):
     files = expand_paths(files)
