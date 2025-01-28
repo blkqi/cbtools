@@ -7,6 +7,7 @@ import re
 import requests
 import shutil
 import tempfile
+import time
 import zipfile
 import importlib.resources
 
@@ -24,7 +25,16 @@ class AniList:
             'format': media_format
         }
         response = requests.post(self.api_url, json={'query': query, 'variables': variables})
-        return AniListResponse(response.json())
+
+        if response.status_code == 200:
+            return AniListResponse(response.json())
+        elif response.status_code == 429:
+            wait = int(response.headers['Retry-After'])
+            time.sleep(wait+1)
+            return self.search(series_id)
+        else:
+            # TODO: handle error response?
+            return AniListResponse({})
 
 class AniListResponse(dict):
     ANILIST_COMICINFO_JMESMAP = {
