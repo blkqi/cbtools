@@ -12,7 +12,17 @@ class AniListAdapter(requests.adapters.HTTPAdapter):
         super().__init__(*args, **kwds)
 
     def send(self, request, **kwds):
-        return super().send(request, **kwds)
+        success = False
+        while not success:
+            response = super().send(request, **kwds)
+
+            if response.status_code == 429:
+                wait = int(response.headers['Retry-After'])
+                time.sleep(wait+1)
+            else:
+                success = True
+
+        return response
 
 class AniList:
     def __init__(self):
@@ -35,13 +45,7 @@ class AniList:
         try:
             response.raise_for_status()
         except HTTPError as e:
-            if response.status_code == 429:
-                wait = int(response.headers['Retry-After'])
-                time.sleep(wait+1)
-                # TODO: this could loop forever
-                return self.search(series_id)
-            else:
-                raise e
+            raise e
 
         return AniListResponse(response.json())
 
