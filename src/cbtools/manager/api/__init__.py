@@ -1,6 +1,9 @@
+import pathlib
+
 from flask import Flask
 
 from cbtools.config import config
+from cbtools.manager import manager_queue
 
 app = Flask(__name__)
 
@@ -10,10 +13,17 @@ def info():
 
 @app.route("/rescan", methods=['POST'])
 def rescan():
-    # TODO: force rescan the library
-    return ""
+    library = pathlib.Path(config['library_path'])
+
+    for path in library.iterdir():
+        if path.is_dir():
+            if any([f.suffix.lower() == '.cbz' for f in path.iterdir()]):
+                manager_queue.enqueue(path)
+
+    return ("", 204)
 
 @app.route("/flush", methods=['POST'])
 def flush():
-    # TODO: force flush the queue
-    return ""
+    manager_queue.flush()
+
+    return ("", 204)

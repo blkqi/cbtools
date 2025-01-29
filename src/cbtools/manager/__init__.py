@@ -38,6 +38,10 @@ class ManagerQueue:
 
         return None
 
+    def flush(self):
+        for item in self.queue:
+            item.time = 0
+
     def _is_next_ready(self):
         return not self._is_empty() and time.time() - self.queue[0].time >= self.delay
 
@@ -47,9 +51,11 @@ class ManagerQueue:
 def worker():
     while True:
         path = manager_queue.dequeue()
+
         if path:
             print(f'Processing {path}')
-        time.sleep(5)
+        else:
+            time.sleep(10)
 
 manager_queue = ManagerQueue(300)
 thread = threading.Thread(target=worker)
