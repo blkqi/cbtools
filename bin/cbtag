@@ -5,7 +5,7 @@ import pathlib
 import argparse
 import logging
 
-from cbtools.core import CBZFile, ComicInfo, expand_paths
+from cbtools.core import CBZFile, expand_paths
 from cbtools.tag import AniList
 
 PROG_NAME = 'cbtag'
