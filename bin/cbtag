@@ -14,10 +14,6 @@ def cbtag(files, series_id, dryrun):
     files = expand_paths(files)
     cinfo = AniList().search(series_id).to_cinfo()
 
-    if not cinfo:
-        logger.error(f'No metadata found with series ID {series_id}')
-        sys.exit(-1)
-
     for path in files:
         with CBZFile(path) as cfile:
             if cfile.volume:
