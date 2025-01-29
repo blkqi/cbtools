@@ -30,7 +30,6 @@ def main():
     logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
     args = parse_args()
-    print(args)
 
     try:
         cbinfo(**args)
