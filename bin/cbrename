@@ -28,8 +28,13 @@ class CBZRenamer(object):
                       'Volume': lambda x: f'V{int(x):02}',
                       'Writer': lambda x: f'{x}',
                       'Year':   lambda x: f'{x}'}
-        inputs = {key: fun(cinfo.get(key)) for key, fun in formatters.items() if key in cinfo}
+        inputs = {key: self._santiize(fun(cinfo.get(key)))
+              for key, fun in formatters.items() if key in cinfo}
         return self._template.substitute(self._defaults, **inputs).strip()
+
+    def _santiize(self, value):
+        allowedChars = string.ascii_letters + string.digits + " _-~'!@#$%^&()[]{}"
+        return ''.join(c for c in value if c in allowedChars)
 
     def path(self, cfile, root=pathlib.Path('')):
         path = pathlib.Path(self._substitute(cfile))
