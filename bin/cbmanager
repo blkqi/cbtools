@@ -1,0 +1,19 @@
+#!/usr/bin/env python
+
+from waitress import serve
+from watchdog.observers import Observer
+
+from cbtools.config import config
+from cbtools.manager import LibraryHandler
+from cbtools.manager.api import app
+
+if __name__ == "__main__":
+    handler = LibraryHandler()
+    observer = Observer()
+    observer.schedule(handler, path=config['library_path'], recursive=True)
+    observer.start()
+
+    serve(app, host='0.0.0.0', port=8080)
+
+    observer.stop()
+    observer.join()
