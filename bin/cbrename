@@ -17,6 +17,7 @@ ARG_PATTERN_DEFAULT = '${Series} (${Year})/${Series} ${Volume}'
 
 class CBZRenamer(object):
     FILENAME_SUFFIX = '.cbz'
+    ALLOWED_CHARS = string.ascii_letters + string.digits + " _-~'!@#$%^&()[]{}"
 
     def __init__(self, pattern, default=''):
         self._template = string.Template(pattern)
@@ -33,8 +34,7 @@ class CBZRenamer(object):
         return self._template.substitute(self._defaults, **inputs).strip()
 
     def _santiize(self, value):
-        allowedChars = string.ascii_letters + string.digits + " _-~'!@#$%^&()[]{}"
-        return ''.join(c for c in value if c in allowedChars)
+        return ''.join(c for c in value if c in self.ALLOWED_CHARS)
 
     def path(self, cfile, root=pathlib.Path('')):
         path = pathlib.Path(self._substitute(cfile))
