@@ -97,3 +97,13 @@ def expand_paths(paths):
         return paths
 
     return [f for e in paths for f in glob(str(e))]
+
+def get_series_id(path):
+    if path.is_file():
+        path = path.parent
+
+    try:
+        with open(path / '.anilist.txt') as file:
+            return int(file.read().strip())
+    except FileNotFoundError:
+        return None

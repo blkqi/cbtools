@@ -5,7 +5,7 @@ import threading
 
 from watchdog.events import FileSystemEventHandler
 
-from cbtools.core import CBZFile, expand_paths
+from cbtools.core import CBZFile, expand_paths, get_series_id
 from cbtools.tag import AniList
 
 logger = logging.getLogger(__name__)
@@ -57,13 +57,6 @@ class ManagerQueue:
 
     def _is_empty(self):
         return len(self.queue) == 0
-
-def get_series_id(folder):
-    try:
-        with open(folder / '.anilist.txt') as file:
-            return int(file.read().strip())
-    except FileNotFoundError:
-        return None
 
 def tag(folder, series_id, dryrun):
     cinfo = AniList().search(series_id).to_cinfo()
