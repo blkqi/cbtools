@@ -68,7 +68,7 @@ def cbrename(files, pattern, root, validate, dryrun):
             CBZRenamer.rename(path, newpath)
 
 def main():
-    logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
     parser = argparse.ArgumentParser(prog='cbrename')
     parser.add_argument('files', nargs='+', type=pathlib.Path)
