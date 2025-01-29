@@ -19,7 +19,7 @@ def cbtag(files, series_id, dryrun):
             if cfile.volume:
                 cinfo['Volume'] = cfile.volume
 
-            diff = cfile.info.compare(cinfo)
+            diff = cfile.info.compare(cinfo, excluding=['Notes'])
 
             if not diff:
                 logger.info(f'{path}: no changes required')
