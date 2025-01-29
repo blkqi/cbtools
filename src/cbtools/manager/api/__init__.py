@@ -1,13 +1,19 @@
 from flask import Flask
 
-from cbtools.config import CONFIG
+from cbtools.config import config
 
 app = Flask(__name__)
 
 @app.route("/")
 def info():
-    return CONFIG
+    return config
 
-@app.rescan("/rescan", methods=['POST'])
-def config():
+@app.route("/rescan", methods=['POST'])
+def rescan():
+    # TODO: force rescan the library
+    return ""
+
+@app.route("/flush", methods=['POST'])
+def flush():
+    # TODO: force flush the queue
     return ""
