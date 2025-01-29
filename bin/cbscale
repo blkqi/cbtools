@@ -17,13 +17,18 @@ WAIFU2X_BIN = os.getenv('WAIFU2X_BIN', '/usr/bin/waifu2x-ncnn-vulkan')
 WAIFU2X_MODEL = os.getenv('WAIFU2X_MODEL', '/usr/share/waifu2x-ncnn-vulkan/models-upconv_7_anime_style_art_rgb')
 OUTFILE_SUFFIX = 'cbscale'
 
-def upscale(cfile, scale, noise, ftype, gpuid,
+def upscale(cfile, path, scale, noise, ftype, gpuid,
             entrypoint=WAIFU2X_BIN, model=WAIFU2X_MODEL):
 
     with tempfile.TemporaryDirectory() as srcdir, \
             tempfile.TemporaryDirectory() as dstdir:
 
+        inpath = pathlib.Path(cfile.filename)
+        logger.info(f'Unpacking archive "{inpath}"')
+
         cfile.extractall(path=srcdir, flatten=True)
+
+        logger.info(f'Upscaling image data')
 
         try:
             process = subprocess.Popen(
@@ -51,18 +56,22 @@ def upscale(cfile, scale, noise, ftype, gpuid,
 
         srcpath = pathlib.Path(srcdir)
         dstpath = pathlib.Path(dstdir)
-        outpath = pathlib.Path(cfile.filename)
-        outname = f'{outpath.with_suffix('')}_{OUTFILE_SUFFIX}{outpath.suffix}'
 
-        with CBZFile(outname, mode='w') as cfile:
-            # add comicinfo
+        stem = '_'.join((inpath.stem, OUTFILE_SUFFIX))
+        path = path or inpath.parent
+        outpath = (path / stem).with_suffix('.cbz')
+
+        logger.info(f'Packing archive "{outpath}"')
+
+        with CBZFile(outpath, mode='w') as cfile:
             path = srcpath / ComicInfo.XML_FILENAME
             if path.exists():
                 cfile.write(path, arcname=path.name)
 
-            # add images
             for path in sorted(dstpath.iterdir()):
                 cfile.write(path, arcname=path.name)
+
+        logger.info(f'Created archive "{outpath}"')
 
 def cbscale(files, **kwds):
     files = expand_paths(files)
@@ -76,6 +85,7 @@ def main():
 
     parser = argparse.ArgumentParser(prog='cbscale')
     parser.add_argument('files', nargs='+', type=pathlib.Path)
+    parser.add_argument('--path', type=pathlib.Path)
     parser.add_argument('--scale', default=2, choices=[1,2,4,8,16,32])
     parser.add_argument('--noise', default=2, choices=[-1,0,1,2,3])
     parser.add_argument('--ftype', default='jpg', choices=['jpg', 'png', 'webp'], type=str)
