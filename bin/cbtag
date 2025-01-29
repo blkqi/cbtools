@@ -3,17 +3,20 @@
 import sys
 import pathlib
 import argparse
+import logging
 
 from cbtools.core import CBZFile, ComicInfo, expand_paths
 from cbtools.tag import AniList
+
+logger = logging.getLogger('cbtag')
 
 def cbtag(files, series_id, dryrun):
     files = expand_paths(files)
     cinfo = AniList().search(series_id).to_cinfo()
 
     if not cinfo:
-        print(f'No metadata found with series ID {series_id}')
-        return
+        logger.error(f'No metadata found with series ID {series_id}')
+        sys.exit(-1)
 
     for path in files:
         with CBZFile(path) as cfile:
@@ -23,7 +26,7 @@ def cbtag(files, series_id, dryrun):
             diff = cfile.info.compare(cinfo)
 
             if not diff:
-                print(f'{path}: no changes required')
+                logger.info(f'{path}: no changes required')
                 continue
 
             if dryrun:
@@ -33,6 +36,8 @@ def cbtag(files, series_id, dryrun):
                 cfile.update_cinfo(cinfo)
 
 def main():
+    logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
     parser = argparse.ArgumentParser(prog='cbtag')
     parser.add_argument('files', nargs='*', type=pathlib.Path)
     parser.add_argument('--anilist', dest='series_id', type=int, required=True)

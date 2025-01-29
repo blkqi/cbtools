@@ -7,8 +7,11 @@ import pathlib
 import argparse
 import tempfile
 import subprocess
+import logging
 
 from cbtools.core import CBZFile, ComicInfo, expand_paths
+
+logger = logging.getLogger('cbscale')
 
 WAIFU2X_BIN = os.getenv('WAIFU2X_BIN', '/usr/bin/waifu2x-ncnn-vulkan')
 WAIFU2X_MODEL = os.getenv('WAIFU2X_MODEL', '/usr/share/waifu2x-ncnn-vulkan/models-upconv_7_anime_style_art_rgb')
@@ -69,6 +72,8 @@ def cbscale(files, **kwds):
             upscale(cfile, **kwds)
 
 def main():
+    logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
     parser = argparse.ArgumentParser(prog='cbscale')
     parser.add_argument('files', nargs='+', type=pathlib.Path)
     parser.add_argument('--scale', default=2, choices=[1,2,4,8,16,32])

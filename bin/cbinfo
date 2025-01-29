@@ -5,8 +5,11 @@ import sys
 import json
 import pathlib
 import argparse
+import logging
 
 from cbtools.core import CBZFile, expand_paths
+
+logger = logging.getLogger('cbinfo')
 
 def cbinfo(files):
     files = expand_paths(files)
@@ -16,6 +19,8 @@ def cbinfo(files):
             print(json.dumps(cfile.info, indent=2))
 
 def main():
+    logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
     parser = argparse.ArgumentParser(prog='cbinfo')
     parser.add_argument('files', nargs='+', type=pathlib.Path)
     args = parser.parse_args()

@@ -2,10 +2,13 @@ import importlib.resources
 import jmespath
 import requests
 import time
+import logging
 
 import cbtools.tag.extensions
-
 from cbtools.core import ComicInfo
+
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
 
 class AniListAdapter(requests.adapters.HTTPAdapter):
     def __init__(self, *args, **kwds):
@@ -22,11 +25,14 @@ class AniListAdapter(requests.adapters.HTTPAdapter):
 
     def _throttle(self, response):
         if response.status_code == 429:
-            period = int(response.headers['Retry-After'])
-            time.sleep(period)
+            self._wait(int(response.headers['Retry-After']))
             return True
         else:
             return False
+
+    def _wait(self, period):
+        logger.warn(f'AniList rate limit exceeded! Retry in {period} seconds.')
+        time.sleep(period)
 
 class AniList:
     def __init__(self):
