@@ -34,8 +34,10 @@ class ComicInfo(dict):
         xsd_tree = lxml.etree.parse(ComicInfo.XSD_FILENAME)
         lxml.etree.XMLSchema(xsd_tree).assertValid(tree)
 
-    def compare(self, with_data):
-        result = dictdiffer.diff(self, with_data)
+    def compare(self, with_data, excluding=[]):
+        result = dictdiffer.diff(
+            {k: v for k, v in self.items() if k not in excluding},
+            {k: v for k, v in with_data.items() if k not in excluding})
         return list(result)
 
 class CBZFile(zipfile.ZipFile):
