@@ -1,18 +1,23 @@
+import logging
 import pathlib
 import time
 import threading
 
 from watchdog.events import FileSystemEventHandler
 
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
+logger.setLevel(logging.DEBUG)
+
 class LibraryHandler(FileSystemEventHandler):
     def on_modified(self, event):
         path = pathlib.Path(event.src_path)
 
         if path.suffix.lower() == '.cbz':
-            print(f'CBZ file {path.name} updated in {path.parent}')
+            logger.debug(f'CBZ file {path.name} updated in {path.parent}')
             manager_queue.enqueue(path.parent)
         elif path.name == '.anilist.txt':
-            print(f'.anilist.txt update in {path.parent}')
+            logger.debug(f'.anilist.txt update in {path.parent}')
             manager_queue.enqueue(path.parent)
 
 class ManagerQueueItem:
@@ -26,11 +31,10 @@ class ManagerQueue:
         self.delay = delay
 
     def enqueue(self, item):
-        if item in [q.item for q in self.queue]:
+        if self._is_queued(item):
             return
 
-        delay_item = ManagerQueueItem(item)
-        self.queue.append(delay_item)
+        self.queue.append(ManagerQueueItem(item))
 
     def dequeue(self):
         if self._is_next_ready():
@@ -41,6 +45,9 @@ class ManagerQueue:
     def flush(self):
         for item in self.queue:
             item.time = 0
+
+    def _is_queued(self, item):
+        return item in [q.item for q in self.queue]
 
     def _is_next_ready(self):
         return not self._is_empty() and time.time() - self.queue[0].time >= self.delay
@@ -53,7 +60,8 @@ def worker():
         path = manager_queue.dequeue()
 
         if path:
-            print(f'Processing {path}')
+            # TODO: Do manager stuff
+            logger.debug(f'Processing {path}')
         else:
             time.sleep(10)
 
