@@ -7,8 +7,6 @@ query search_details_by_series_id ($series_id: Int, $format: MediaFormat) {
       romaji
       english
     }
-    status
-    volumes
     isAdult
     averageScore
     studios {
