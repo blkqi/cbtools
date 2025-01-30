@@ -110,8 +110,24 @@ class AniListResponse(dict):
             module = importlib.import_module(f'cbtools.tag.extensions.{extension}')
             module.extension(cinfo, self.media)
 
-def cbtag(files, series_id, dryrun):
+def get_series_id(path):
+    if path.is_file():
+        path = path.parent
+
+    try:
+        with open(path / '.anilist.txt') as file:
+            return int(file.read().strip())
+    except FileNotFoundError:
+        return None
+
+def cbtag(files, series_id=None, dryrun=False):
     paths = expand_paths(files)
+    series_id = series_id or get_series_id(paths[0])
+
+    if not series_id:
+        logger.error('No series ID specified and no .anilist.txt found in path!')
+        return
+
     cinfo = AniList().search(series_id).to_cinfo()
 
     for path in paths:
