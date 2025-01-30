@@ -61,8 +61,11 @@ class CBZRenamer(object):
 def cbrename(files, pattern, root, validate, dryrun):
     files = expand_paths(files)
     renamer = CBZRenamer(pattern)
+    parents = set()
+    includes = ['.anilist.txt', 'cover.jpg']
 
     for path in files:
+        # check if includes exist
         with CBZFile(path) as cfile:
             newpath = renamer.path(cfile, root=root)
 
@@ -72,6 +75,27 @@ def cbrename(files, pattern, root, validate, dryrun):
             print(f'(dryrun) "{path}" -> "{newpath}"')
         else:
             CBZRenamer.rename(path, newpath)
+
+        parents.add(pathlib.Path(path).parent)
+
+    for path in parents:
+        for include in includes:
+            include_path = path / include
+
+            if include_path.exists():
+                new_include_path = newpath.with_name(include)
+
+                if include_path == new_include_path:
+                    continue
+
+                if dryrun:
+                    print(f'(dryrun) "{include_path}" -> "{new_include_path}"')
+                else:
+                    include_path.rename(new_include_path)
+
+        if next(path.iterdir(), None) is None:
+            if not dryrun:
+                path.rmdir()
 
 def parse_args(argv=sys.argv):
     parser = argparse.ArgumentParser(prog=PROG_NAME)
