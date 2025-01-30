@@ -81,14 +81,16 @@ class CBZFile(zipfile.ZipFile):
         return ComicInfo()
 
     def _parse_volume(self):
-        filename_parts = self.filename.split(' ')
+        filename_parts = pathlib.Path(self.filename).stem.split(' ')
         filename_parts.reverse()
 
         for part in filename_parts:
-            found = re.search(r'^[vV]{1}\d+$', part)
+            found = re.search(r'^[vV]{1}\d+\.?\d*$', part)
 
             if found:
-                return str(int(found.group(0)[1:]))
+                value = float(found.group(0)[1:])
+
+                return str(value).removesuffix(".0")
 
 def expand_paths(paths):
     for path in paths:
