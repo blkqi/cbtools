@@ -10,6 +10,27 @@ from cbtools.tag import AniList, cbtag
 PROG_NAME = 'cbtag'
 logger = logging.getLogger(PROG_NAME)
 
+def cbtag(files, series_id, dryrun):
+    paths = expand_paths(files)
+    cinfo = AniList().search(series_id).to_cinfo()
+
+    for path in paths:
+        with CBZFile(path) as cfile:
+            if cfile.volume:
+                cinfo['Volume'] = cfile.volume
+
+            diff = cfile.info.compare(cinfo, excluding=['Notes'])
+
+            if not diff:
+                logger.info(f'{path}: no changes required')
+                continue
+
+            if dryrun:
+                for item in diff:
+                    print(item)
+            else:
+                cfile.update_cinfo(cinfo)
+
 def parse_args(argv=sys.argv):
     parser = argparse.ArgumentParser(prog=PROG_NAME)
     parser.add_argument('files', nargs='*', type=pathlib.Path)
