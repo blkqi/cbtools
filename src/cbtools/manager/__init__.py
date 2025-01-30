@@ -5,7 +5,7 @@ import threading
 
 from watchdog.events import FileSystemEventHandler
 
-from cbtools.core import CBZFile, expand_paths, get_series_id
+from cbtools.core import CBZFile, expand_paths
 from cbtools.tag import AniList, cbtag
 
 logger = logging.getLogger(__name__)
@@ -65,13 +65,7 @@ def worker():
         if path:
             logger.debug(f'Processing {path}')
 
-            series_id = get_series_id(path)
-
-            if not series_id:
-                logger.warning(f'No series ID found for {path}')
-                continue
-
-            cbtag([path], series_id, True)
+            cbtag([path], dryrun=True)
         else:
             time.sleep(10)
 
