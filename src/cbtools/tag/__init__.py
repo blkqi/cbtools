@@ -5,6 +5,7 @@ import time
 import logging
 
 import cbtools.tag.extensions
+from cbtools.config import config
 from cbtools.core import ComicInfo, CBZFile, expand_paths
 
 logger = logging.getLogger(__name__)
@@ -115,7 +116,7 @@ def get_series_id(path):
         path = path.parent
 
     try:
-        with open(path / '.anilist.txt') as file:
+        with open(path / config['seriesid_filename']) as file:
             return int(file.read().strip())
     except FileNotFoundError:
         return None
@@ -129,7 +130,7 @@ def cbtag(files, series_id=None, dryrun=False):
             series_id = get_series_id(path)
 
             if not series_id:
-                logger.error('No series ID specified and no .anilist.txt found in path!')
+                logger.error(f"No series ID specified and no {config['seriesid_filename']} found in path!")
                 return
 
         if not cinfo:

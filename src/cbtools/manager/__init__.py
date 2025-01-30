@@ -5,12 +5,14 @@ import threading
 
 from watchdog.events import FileSystemEventHandler
 
+from cbtools.config import config
 from cbtools.core import CBZFile, expand_paths
 from cbtools.tag import AniList, cbtag
+from cbtools.rename import cbrename
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.DEBUG if config['test_mode'] else logging.INFO)
 
 class LibraryHandler(FileSystemEventHandler):
     # TODO: we might need to ignore events originating from cbmanager
@@ -25,8 +27,8 @@ class LibraryHandler(FileSystemEventHandler):
     def on_modified(self, event):
         path = pathlib.Path(event.src_path)
 
-        if path.name == '.anilist.txt':
-            logger.debug(f'.anilist.txt update in {path.parent}')
+        if path.name == config['seriesid_filename']:
+            logger.debug(f"{config['seriesid_filename']} update in {path.parent}")
             manager_queue.enqueue(path.parent)
 
 class ManagerQueueItem:
@@ -73,7 +75,8 @@ def worker():
             start = time.time()
 
             logger.debug(f'Processing {path}')
-            cbtag([path], dryrun=True)
+            cbtag([path], dryrun=config['test_mode'])
+            cbrename([path], dryrun=config['test_mode'], path=config['library_path'])
 
             end = time.time()
             elapsed = end - start
