@@ -2,7 +2,10 @@ import json
 import os
 
 DEFAULT_CONFIG = {
-    "library_path": "/library"
+    "test_mode": False,
+    "library_path": "/library",
+    "seriesid_filename": ".anilist.txt",
+    "move_includes": [".anilist.txt", "cover.jpg"]
 }
 
 CONFIG_FILE_PATH = os.getenv('CONFIG_FILE_PATH', os.getcwd() + '/config.json')
