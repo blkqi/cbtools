@@ -62,7 +62,7 @@ class CBZRenamer(object):
 def cbrename(files, pattern, root, validate, dryrun):
     files = expand_paths(files)
     renamer = CBZRenamer(pattern)
-    parents = set()
+    parents = {}
     includes = ['.anilist.txt', 'cover.jpg']
 
     for path in files:
@@ -77,14 +77,14 @@ def cbrename(files, pattern, root, validate, dryrun):
         else:
             CBZRenamer.rename(path, newpath)
 
-        parents.add(pathlib.Path(path).parent)
+        parents[pathlib.Path(path).parent] = pathlib.Path(newpath).parent
 
-    for path in parents:
+    for path, newpath in parents.items():
         for include in includes:
             include_path = path / include
 
             if include_path.exists():
-                new_include_path = newpath.with_name(include)
+                new_include_path = newpath / include
 
                 if include_path == new_include_path:
                     continue
