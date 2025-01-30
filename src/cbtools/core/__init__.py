@@ -106,13 +106,3 @@ def expand_paths(files):
             paths.append(path)
 
     return [path for path in paths if path.suffix.lower() == '.cbz']
-
-def get_series_id(path):
-    if path.is_file():
-        path = path.parent
-
-    try:
-        with open(path / '.anilist.txt') as file:
-            return int(file.read().strip())
-    except FileNotFoundError:
-        return None
