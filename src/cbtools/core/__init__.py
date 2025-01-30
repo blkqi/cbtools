@@ -83,7 +83,7 @@ class CBZFile(zipfile.ZipFile):
         return ComicInfo()
 
     def _parse_volume(self):
-        filename_parts = self.filename.split(' ')
+        filename_parts = pathlib.Path(self.filename).stem.split(' ')
         filename_parts.reverse()
 
         for part in filename_parts:
