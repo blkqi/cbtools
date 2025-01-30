@@ -12,10 +12,10 @@ PROG_NAME = 'cbtag'
 logger = logging.getLogger(PROG_NAME)
 
 def cbtag(files, series_id, dryrun):
-    files = expand_paths(files)
+    paths = expand_paths(files)
     cinfo = AniList().search(series_id).to_cinfo()
 
-    for path in files:
+    for path in paths:
         with CBZFile(path) as cfile:
             if cfile.volume:
                 cinfo['Volume'] = cfile.volume

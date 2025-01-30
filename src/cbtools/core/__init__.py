@@ -92,11 +92,20 @@ class CBZFile(zipfile.ZipFile):
             if found:
                 return str(int(found.group(0)[1:]))
 
-def expand_paths(paths):
-    if platform.system() != 'Windows':
-        return paths
+def expand_paths(files):
+    if platform.system() == 'Windows':
+        files = [f for e in files for f in glob(str(e))]
 
-    return [f for e in paths for f in glob(str(e))]
+    paths = []
+
+    for file in files:
+        path = pathlib.Path(file)
+        if path.is_dir():
+            paths.extend(path.iterdir())
+        else:
+            paths.append(path)
+
+    return [path for path in paths if path.suffix.lower() == '.cbz']
 
 def get_series_id(path):
     if path.is_file():
