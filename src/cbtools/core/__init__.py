@@ -105,4 +105,9 @@ def expand_paths(files):
         else:
             paths.append(path)
 
-    return [path for path in paths if path.suffix.lower() == '.cbz']
+    paths = [path for path in paths if path.suffix.lower() == '.cbz']
+
+    if not paths:
+        raise FileNotFoundError('No CBZ files found')
+
+    return paths
