@@ -20,12 +20,20 @@ class LibraryHandler(FileSystemEventHandler):
     def on_created(self, event):
         path = pathlib.Path(event.src_path)
 
+        if path.parent in processing_items:
+            logger.debug(f'Skipping {path.name} as the folder is currently processing')
+            return
+
         if path.suffix.lower() == '.cbz':
             logger.debug(f'CBZ file {path.name} updated in {path.parent}')
             manager_queue.enqueue(path.parent)
 
     def on_modified(self, event):
         path = pathlib.Path(event.src_path)
+
+        if path.parent in processing_items:
+            logger.debug(f'Skipping {path.name} as the folder is currently processing')
+            return
 
         if path.name == config['seriesid_filename']:
             logger.debug(f"{config['seriesid_filename']} update in {path.parent}")
@@ -73,17 +81,20 @@ def worker():
 
         if path:
             start = time.time()
+            processing_items.add(path)
 
             logger.debug(f'Processing {path}')
             cbtag([path], dryrun=config['test_mode'])
             cbrename([path], dryrun=config['test_mode'], path=config['library_path'])
 
+            processing_items.remove(path)
             end = time.time()
             elapsed = end - start
 
         if elapsed < 2:
             time.sleep(2 - elapsed)
 
+processing_items = set()
 manager_queue = ManagerQueue(300)
 thread = threading.Thread(target=worker)
 thread.daemon = True
