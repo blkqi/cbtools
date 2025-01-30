@@ -6,7 +6,7 @@ import threading
 from watchdog.events import FileSystemEventHandler
 
 from cbtools.core import CBZFile, expand_paths, get_series_id
-from cbtools.tag import AniList
+from cbtools.tag import AniList, cbtag
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
@@ -58,29 +58,6 @@ class ManagerQueue:
     def _is_empty(self):
         return len(self.queue) == 0
 
-def tag(folder, series_id, dryrun):
-    cinfo = AniList().search(series_id).to_cinfo()
-
-    for path in folder.iterdir():
-        if path.suffix.lower() != '.cbz':
-            continue
-
-        with CBZFile(path) as cfile:
-            if cfile.volume:
-                cinfo['Volume'] = cfile.volume
-
-            diff = cfile.info.compare(cinfo, excluding=['Notes'])
-
-            if not diff:
-                logger.info(f'{path}: no changes required')
-                continue
-
-            if dryrun:
-                for item in diff:
-                    print(item)
-            else:
-                cfile.update_cinfo(cinfo)
-
 def worker():
     while True:
         path = manager_queue.dequeue()
@@ -94,7 +71,7 @@ def worker():
                 logger.warning(f'No series ID found for {path}')
                 continue
 
-            tag(path, series_id, True)
+            cbtag([path], series_id, True)
         else:
             time.sleep(10)
 

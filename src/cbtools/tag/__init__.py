@@ -5,7 +5,7 @@ import time
 import logging
 
 import cbtools.tag.extensions
-from cbtools.core import ComicInfo
+from cbtools.core import ComicInfo, CBZFile, expand_paths
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
@@ -109,3 +109,24 @@ class AniListResponse(dict):
         for extension in extensions.__all__:
             module = importlib.import_module(f'cbtools.tag.extensions.{extension}')
             module.extension(cinfo, self.media)
+
+def cbtag(files, series_id, dryrun):
+    paths = expand_paths(files)
+    cinfo = AniList().search(series_id).to_cinfo()
+
+    for path in paths:
+        with CBZFile(path) as cfile:
+            if cfile.volume:
+                cinfo['Volume'] = cfile.volume
+
+            diff = cfile.info.compare(cinfo, excluding=['Notes'])
+
+            if not diff:
+                logger.info(f'{path}: no changes required')
+                continue
+
+            if dryrun:
+                for item in diff:
+                    print(item)
+            else:
+                cfile.update_cinfo(cinfo)
