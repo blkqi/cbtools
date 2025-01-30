@@ -61,13 +61,19 @@ class ManagerQueue:
 def worker():
     while True:
         path = manager_queue.dequeue()
+        elapsed = 0
 
         if path:
-            logger.debug(f'Processing {path}')
+            start = time.time()
 
+            logger.debug(f'Processing {path}')
             cbtag([path], dryrun=True)
-        else:
-            time.sleep(10)
+
+            end = time.time()
+            elapsed = end - start
+
+        if elapsed < 2:
+            time.sleep(2 - elapsed)
 
 manager_queue = ManagerQueue(300)
 thread = threading.Thread(target=worker)
