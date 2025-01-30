@@ -8,8 +8,6 @@ import tempfile
 import zipfile
 import importlib.resources
 
-from glob import glob
-
 class ComicInfo(dict):
     XSD_FILENAME = importlib.resources.files(__name__).joinpath('ComicInfo.xsd')
     XML_FILENAME = 'ComicInfo.xml'
@@ -92,22 +90,13 @@ class CBZFile(zipfile.ZipFile):
             if found:
                 return str(int(found.group(0)[1:]))
 
-def expand_paths(files):
-    if platform.system() == 'Windows':
-        files = [f for e in files for f in glob(str(e))]
-
-    paths = []
-
-    for file in files:
-        path = pathlib.Path(file)
-        if path.is_dir():
-            paths.extend(path.iterdir())
-        else:
-            paths.append(path)
-
-    paths = [path for path in paths if path.suffix.lower() == '.cbz']
-
-    if not paths:
-        raise FileNotFoundError('No CBZ files found')
-
-    return paths
+def expand_paths(paths):
+    for path in paths:
+        if '*' in path.name:
+            yield from expand_paths(pathlib.Path(path.parent).glob(path.name))
+        elif path.is_symlink():
+            continue
+        elif path.is_dir():
+            yield from expand_paths(path.iterdir())
+        elif path.is_file() and path.suffix.lower() == '.cbz':
+            yield path
