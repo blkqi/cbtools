@@ -25,10 +25,10 @@ class CBZRenamer(object):
 
     def _substitute(self, cfile):
         cinfo = cfile.info
-        formatters = {'Series': lambda x: f'{x}',
-                      'Volume': lambda x: f'V{int(x.split('.')[0]):02}' + (f'.{x.split('.')[-1]}' if len(x.split('.')) > 1 else ''),
-                      'Writer': lambda x: f'{x}',
-                      'Year':   lambda x: f'{x}'}
+        formatters = {'Series': str,
+                      'Volume': lambda x: f'V{int(x.split('.')[0]):02}{f'.{x.split('.')[-1]}' if '.' in x else ''}',
+                      'Writer': str,
+                      'Year':   str}
         cinfo['Series'] = cinfo.get('LocalizedSeries') or cinfo.get('Series')
         inputs = {key: self._santiize(fun(cinfo.get(key)))
               for key, fun in formatters.items() if key in cinfo}
