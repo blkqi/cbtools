@@ -31,9 +31,9 @@ class CBZRenamer(object):
         inputs = {key: fun(cinfo.get(key)) for key, fun in formatters.items() if key in cinfo}
         return self._template.substitute(self._defaults, **inputs).strip()
 
-    def path(self, cfile, root=pathlib.Path('')):
-        path = pathlib.Path(self._substitute(cfile))
-        return (root / path).with_suffix(self.FILENAME_SUFFIX)
+    def path(self, cfile, path=pathlib.Path('')):
+        stem = pathlib.Path(self._substitute(cfile))
+        return (path / stem).with_suffix(self.FILENAME_SUFFIX)
 
     def rename(src, dst):
         # create required directory structure
@@ -53,13 +53,13 @@ class CBZRenamer(object):
         shutil.copyfile(src, dst)
         src.unlink()
 
-def cbrename(files, pattern, root, validate, dryrun):
+def cbrename(files, pattern, validate, dryrun, **kwds):
     files = expand_paths(files)
     renamer = CBZRenamer(pattern)
 
     for path in files:
         with CBZFile(path) as cfile:
-            newpath = renamer.path(cfile, root=root)
+            newpath = renamer.path(cfile, **kwds)
 
         if path == newpath:
             continue
@@ -71,7 +71,7 @@ def cbrename(files, pattern, root, validate, dryrun):
 def parse_args(argv=sys.argv):
     parser = argparse.ArgumentParser(prog=PROG_NAME)
     parser.add_argument('files', nargs='+', type=pathlib.Path)
-    parser.add_argument('--root', default='', type=pathlib.Path)
+    parser.add_argument('--path', default='', type=pathlib.Path)
     parser.add_argument('--pattern', default=ARG_PATTERN_DEFAULT)
     parser.add_argument('--validate', action='store_true')
     parser.add_argument('--dryrun', action='store_true')
