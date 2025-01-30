@@ -93,7 +93,7 @@ class CBZFile(zipfile.ZipFile):
 def expand_paths(paths):
     for path in paths:
         if '*' in path.name:
-            yield from expand_paths(pathlib.Path(path.parent).glob(path.name))
+            yield from expand_paths(path.parent.glob(path.name))
         elif path.is_symlink():
             continue
         elif path.is_dir():
