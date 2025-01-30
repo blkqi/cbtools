@@ -122,15 +122,19 @@ def get_series_id(path):
 
 def cbtag(files, series_id=None, dryrun=False):
     paths = expand_paths(files)
-    series_id = series_id or get_series_id(paths[0])
-
-    if not series_id:
-        logger.error('No series ID specified and no .anilist.txt found in path!')
-        return
-
-    cinfo = AniList().search(series_id).to_cinfo()
+    cinfo = None
 
     for path in paths:
+        if not series_id:
+            series_id = get_series_id(path)
+
+            if not series_id:
+                logger.error('No series ID specified and no .anilist.txt found in path!')
+                return
+
+        if not cinfo:
+            cinfo = AniList().search(series_id).to_cinfo()
+
         with CBZFile(path) as cfile:
             if cfile.volume:
                 cinfo['Volume'] = cfile.volume
