@@ -17,7 +17,7 @@ ARG_PATTERN_DEFAULT = '${Series} (${Year})/${Series} ${Volume}'
 
 class CBZRenamer(object):
     FILENAME_SUFFIX = '.cbz'
-    ALLOWED_CHARS = string.ascii_letters + string.digits + " _-~'!@#$%^&()[]{}"
+    ALLOWED_CHARS = string.ascii_letters + string.digits + " _-~.'!@#$%^&()[]{}"
 
     def __init__(self, pattern, default=''):
         self._template = string.Template(pattern)
@@ -26,7 +26,7 @@ class CBZRenamer(object):
     def _substitute(self, cfile):
         cinfo = cfile.info
         formatters = {'Series': lambda x: f'{x}',
-                      'Volume': lambda x: f'V{int(x):02}',
+                      'Volume': lambda x: f'V{int(x.split('.')[0]):02}' + (f'.{x.split('.')[-1]}' if len(x.split('.')) > 1 else ''),
                       'Writer': lambda x: f'{x}',
                       'Year':   lambda x: f'{x}'}
         cinfo['Series'] = cinfo.get('LocalizedSeries') or cinfo.get('Series')
@@ -39,7 +39,7 @@ class CBZRenamer(object):
 
     def path(self, cfile, root=pathlib.Path('')):
         path = pathlib.Path(self._substitute(cfile))
-        return (root / path).with_suffix(self.FILENAME_SUFFIX)
+        return (root / path).with_suffix(path.suffix + self.FILENAME_SUFFIX)
 
     def rename(src, dst):
         # create required directory structure

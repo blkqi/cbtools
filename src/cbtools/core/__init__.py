@@ -8,8 +8,6 @@ import tempfile
 import zipfile
 import importlib.resources
 
-from decimal import Decimal
-
 class ComicInfo(dict):
     XSD_FILENAME = importlib.resources.files(__name__).joinpath('ComicInfo.xsd')
     XML_FILENAME = 'ComicInfo.xml'
@@ -90,7 +88,9 @@ class CBZFile(zipfile.ZipFile):
             found = re.search(r'^[vV]{1}\d+\.?\d*$', part)
 
             if found:
-                return str(Decimal(found.group(0)[1:]).normalize())
+                value = float(found.group(0)[1:])
+
+                return str(value).removesuffix(".0")
 
 def expand_paths(paths):
     for path in paths:
