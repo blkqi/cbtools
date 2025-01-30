@@ -13,13 +13,19 @@ logger.addHandler(logging.NullHandler())
 logger.setLevel(logging.DEBUG)
 
 class LibraryHandler(FileSystemEventHandler):
+    # TODO: we might need to ignore events originating from cbmanager
+
     def on_created(self, event):
         path = pathlib.Path(event.src_path)
 
         if path.suffix.lower() == '.cbz':
             logger.debug(f'CBZ file {path.name} updated in {path.parent}')
             manager_queue.enqueue(path.parent)
-        elif path.name == '.anilist.txt':
+
+    def on_modified(self, event):
+        path = pathlib.Path(event.src_path)
+
+        if path.name == '.anilist.txt':
             logger.debug(f'.anilist.txt update in {path.parent}')
             manager_queue.enqueue(path.parent)
 
