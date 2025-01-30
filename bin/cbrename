@@ -37,9 +37,9 @@ class CBZRenamer(object):
     def _santiize(self, value):
         return ''.join(c for c in value if c in self.ALLOWED_CHARS)
 
-    def path(self, cfile, root=pathlib.Path('')):
-        path = pathlib.Path(self._substitute(cfile))
-        return (root / path).with_suffix(path.suffix + self.FILENAME_SUFFIX)
+    def path(self, cfile, path=pathlib.Path('')):
+        stem = pathlib.Path(self._substitute(cfile))
+        return (path / stem).with_suffix(stem.suffix + self.FILENAME_SUFFIX)
 
     def rename(src, dst):
         # create required directory structure
