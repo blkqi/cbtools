@@ -4,6 +4,8 @@ import pathlib
 import time
 import threading
 
+from logging import Formatter
+from logging.handlers import TimedRotatingFileHandler
 from typing import Set
 from waitress import serve
 from watchdog.observers import Observer
@@ -18,7 +20,15 @@ from cbtools.rename import cbrename
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
-logger.setLevel(logging.DEBUG if config['test_mode'] else logging.INFO)
+logger.addHandler(TimedRotatingFileHandler(
+    filename=config['log_path'] / 'cbmanager.log',
+    when='D',
+    interval=1,
+    backupCount=6,
+    encoding='utf-8',
+    delay=False,
+))
+logger.setLevel(logging.DEBUG)
 
 processing_items: Set[pathlib.Path] = set()
 
