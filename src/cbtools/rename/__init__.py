@@ -1,9 +1,9 @@
 import os
 import shutil
 import string
-import pathlib
 import logging
 
+from pathlib import Path
 from cbtools.config import config
 from cbtools.core import CBZFile, expand_paths
 from operator import itemgetter
@@ -40,7 +40,7 @@ def _path_from_cinfo(cinfo, pattern, default=_default_missing):
     values = {k: _sanitize_paths(f(cinfo[k])) for k, f in _formatters() if k in cinfo}
     strpath = template.substitute(defaults, **values)
 
-    return pathlib.Path(strpath.strip() + '.cbz')
+    return Path(strpath.strip() + '.cbz')
 
 _pattern_missing = config['rename_pattern']
 
@@ -76,11 +76,17 @@ def _rename_file(src, dst):
     shutil.copyfile(src, dst)
     src.unlink()
 
-_root_missing = pathlib.Path('')
+_root_missing = Path('')
 _validate_missing = False
 _dryrun_missing = False
 
-def cbrename(files, *, root=_root_missing, validate=_validate_missing, dryrun=_dryrun_missing):
+def cbrename(
+    files: list[Path],
+    root: Path = _root_missing,
+    validate: bool = _validate_missing,
+    dryrun: bool = _dryrun_missing
+) -> None:
+
     paths = expand_paths(files)
     pairs = set(_construct_rename_pairs(paths, root=root))
 
