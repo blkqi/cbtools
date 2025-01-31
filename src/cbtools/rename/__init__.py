@@ -53,8 +53,7 @@ def determine_pairs(paths, *, root):
             if src != dst:
                 yield src, dst
 
-def determine_extra(pairs, includes=()):
-    parents = set((src.parent, dst.parent) for src, dst in pairs)
+def determine_extra(parents, includes=()):
     for inc in includes:
         for src, dst in parents:
             if (src / inc).exists():
@@ -86,7 +85,8 @@ def cbrename(files, *, root, validate=False, dryrun=False):
             raise FileNotFoundError('file "{src}" does not exist!')
         # TODO detect or prevent collisions and overwrites
 
-    extra = set(determine_extra(pairs, includes=config['move_includes']))
+    parents = set((src.parent, dst.parent) for src, dst in pairs if src.parent != dst.parent)
+    extra = set(determine_extra(parents, includes=config['move_includes']))
     union = pairs.union(extra)
 
     for src, dst in sorted(union, key=itemgetter(1)):
@@ -95,7 +95,8 @@ def cbrename(files, *, root, validate=False, dryrun=False):
         else:
             rename_file(src, dst)
 
-            try:
-                next(src.parent.iterdir())
-            except StopIteration:
-                src.parent.rmdir()
+    for src, _ in parents:
+        try:
+            next(src.iterdir())
+        except StopIteration:
+            src.rmdir()
