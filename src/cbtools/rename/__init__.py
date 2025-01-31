@@ -82,7 +82,10 @@ def _rename_file(src, dst):
     shutil.copyfile(src, dst)
     src.unlink()
 
-def cbrename(files, *, root, validate=False, dryrun=False):
+_validate_missing = False
+_dryrun_missing = False
+
+def cbrename(files, *, root, validate=_validate_missing, dryrun=_dryrun_missing):
     paths = expand_paths(files)
     pairs = set(_construct_rename_pairs(paths, root=root))
 
