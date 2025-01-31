@@ -1,12 +1,17 @@
+import asyncio
 import logging
 import pathlib
 import time
 import threading
 
+from waitress import serve
+from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
 from cbtools.config import config
 from cbtools.core import CBZFile, expand_paths
+from cbtools.manager.api import app
+from cbtools.manager.queue import manager_queue
 from cbtools.tag import AniList, cbtag
 from cbtools.rename import cbrename
 
@@ -15,8 +20,6 @@ logger.addHandler(logging.NullHandler())
 logger.setLevel(logging.DEBUG if config['test_mode'] else logging.INFO)
 
 class LibraryHandler(FileSystemEventHandler):
-    # TODO: we might need to ignore events originating from cbmanager
-
     def on_created(self, event):
         path = pathlib.Path(event.src_path)
 
@@ -39,42 +42,7 @@ class LibraryHandler(FileSystemEventHandler):
             logger.debug(f"{config['seriesid_filename']} update in {path.parent}")
             manager_queue.enqueue(path.parent)
 
-class ManagerQueueItem:
-    def __init__(self, item):
-        self.item = item
-        self.time = time.time()
-
-class ManagerQueue:
-    def __init__(self, delay):
-        self.queue = []
-        self.delay = delay
-
-    def enqueue(self, item):
-        if self._is_queued(item):
-            return
-
-        self.queue.append(ManagerQueueItem(item))
-
-    def dequeue(self):
-        if self._is_next_ready():
-            return self.queue.pop(0).item
-
-        return None
-
-    def flush(self):
-        for item in self.queue:
-            item.time = 0
-
-    def _is_queued(self, item):
-        return item in [q.item for q in self.queue]
-
-    def _is_next_ready(self):
-        return not self._is_empty() and time.time() - self.queue[0].time >= self.delay
-
-    def _is_empty(self):
-        return len(self.queue) == 0
-
-def worker():
+async def worker():
     while True:
         path = manager_queue.dequeue()
         elapsed = 0
@@ -84,6 +52,8 @@ def worker():
             processing_items.add(path)
 
             logger.debug(f'Processing {path}')
+
+            # TODO: these i/o bound ops should run async
             cbtag([path], dryrun=config['test_mode'])
             cbrename([path], dryrun=config['test_mode'], path=config['library_path'])
 
@@ -92,10 +62,22 @@ def worker():
             elapsed = end - start
 
         if elapsed < 2:
-            time.sleep(2 - elapsed)
+            await asyncio.sleep(2 - elapsed)
+
+def cbmanager():
+    handler = LibraryHandler()
+    observer = Observer()
+    observer.schedule(handler, path=config['library_path'], recursive=True)
+    observer.start()
+    thread = threading.Thread(target=serve(app, host='0.0.0.0', port=8080), daemon=True)
+    thread.start()
+
+    try:
+        asyncio.run(worker())
+    except KeyboardInterrupt:
+        logger.info('Shutting down...')
+
+    observer.stop()
+    observer.join()
 
 processing_items = set()
-manager_queue = ManagerQueue(300)
-thread = threading.Thread(target=worker)
-thread.daemon = True
-thread.start()
