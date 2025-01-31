@@ -11,10 +11,10 @@ from operator import itemgetter
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
-def allowed_chars():
+def _allowed_chars():
     return string.ascii_letters + string.digits + " _-~.'!@#$%^&()[]{}"
 
-def formatters():
+def _formatters():
     def volume_formatter(volume):
         i, f = str(volume).split('.') if '.' in volume else (str(volume), None)
         return f'V{int(i):02}' + str(f'.{f}' if f else '')
@@ -26,10 +26,12 @@ def formatters():
         ('Volume', volume_formatter),
     )
 
-def sanitize_paths(value):
-    return ''.join(c for c in value if c in allowed_chars())
+def _sanitize_paths(value):
+    return ''.join(c for c in value if c in _allowed_chars())
 
-def format_cinfo(cfile, pattern, default=''):
+_default_missing = ''
+
+def _path_from_cinfo(cfile, pattern, default=_default_missing):
     cinfo = cfile.info
 
     # prefer localized series to series
@@ -37,29 +39,33 @@ def format_cinfo(cfile, pattern, default=''):
 
     template = string.Template(pattern)
     defaults = {key: default for key in template.get_identifiers()}
-    values = {k: sanitize_paths(f(cinfo[k])) for k, f in formatters() if k in cinfo}
+    values = {k: _sanitize_paths(f(cinfo[k])) for k, f in _formatters() if k in cinfo}
     strpath = template.substitute(defaults, **values)
 
     return pathlib.Path(strpath.strip() + '.cbz')
 
-def determine_path(cfile, *, root, pattern=config['rename_pattern']):
-    path = format_cinfo(cfile, pattern)
+_pattern_missing = config['rename_pattern']
+
+def _construct_path(cfile, *, root, pattern=_pattern_missing):
+    path = _path_from_cinfo(cfile, pattern)
     return (root / path)
 
-def determine_pairs(paths, *, root):
+def _construct_rename_pairs(paths, *, root):
     for src in paths:
         with CBZFile(src) as cfile:
-            dst = determine_path(cfile, root=root)
+            dst = _construct_path(cfile, root=root)
             if src != dst:
                 yield src, dst
 
-def determine_extra(parents, includes=()):
+_includes_missing = ()
+
+def _construct_rename_extra(parents, includes=_includes_missing):
     for inc in includes:
         for src, dst in parents:
             if (src / inc).exists():
                 yield (src / inc, dst / inc)
 
-def rename_file(src, dst):
+def _rename_file(src, dst):
     dst.parent.mkdir(parents=True, exist_ok=True)
 
     try:
@@ -78,7 +84,7 @@ def rename_file(src, dst):
 
 def cbrename(files, *, root, validate=False, dryrun=False):
     paths = expand_paths(files)
-    pairs = set(determine_pairs(paths, root=root))
+    pairs = set(_construct_rename_pairs(paths, root=root))
 
     for src, _ in pairs:
         if not src.exists():
@@ -86,14 +92,14 @@ def cbrename(files, *, root, validate=False, dryrun=False):
         # TODO detect or prevent collisions and overwrites
 
     parents = set((src.parent, dst.parent) for src, dst in pairs if src.parent != dst.parent)
-    extra = set(determine_extra(parents, includes=config['move_includes']))
+    extra = set(_construct_rename_extra(parents, includes=config['move_includes']))
     union = pairs.union(extra)
 
     for src, dst in sorted(union, key=itemgetter(1)):
         if dryrun:
             print(f'dryrun) "{src}" -> "{dst}"')
         else:
-            rename_file(src, dst)
+            _rename_file(src, dst)
 
     for src, _ in parents:
         try:
