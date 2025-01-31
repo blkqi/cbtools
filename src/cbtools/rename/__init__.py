@@ -4,6 +4,7 @@ import string
 import logging
 
 from pathlib import Path
+from typing import List, Tuple, Generator, Dict, Any
 from cbtools.config import config
 from cbtools.core import CBZFile, expand_paths
 from operator import itemgetter
@@ -11,14 +12,14 @@ from operator import itemgetter
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
-def _allowed_chars():
+def _allowed_chars() -> str:
     return string.ascii_letters + string.digits + " _-~.'!@#$%^&()[]{}"
 
-def _sanitize_paths(value):
+def _sanitize_paths(value: str) -> str:
     return ''.join(c for c in value if c in _allowed_chars())
 
-def _formatters():
-    def volume_formatter(volume):
+def _formatters() -> Tuple[Tuple[str, callable], ...]:
+    def volume_formatter(volume: str) -> str:
         i, f = str(volume).split('.') if '.' in volume else (str(volume), None)
         return f'V{int(i):02}' + str(f'.{f}' if f else '')
 
@@ -31,7 +32,7 @@ def _formatters():
 
 _default_missing = ''
 
-def _path_from_cinfo(cinfo, pattern, default=_default_missing):
+def _path_from_cinfo(cinfo: Dict[str, Any], pattern: str, default: str = _default_missing) -> Path:
     # prefer localized series to series
     cinfo['Series'] = cinfo.get('LocalizedSeries') or cinfo.get('Series')
 
@@ -44,7 +45,7 @@ def _path_from_cinfo(cinfo, pattern, default=_default_missing):
 
 _pattern_missing = config['rename_pattern']
 
-def _construct_rename_pairs(paths, *, root, pattern=_pattern_missing):
+def _construct_rename_pairs(paths: List[Path], *, root: Path, pattern: str = _pattern_missing) -> Generator[Tuple[Path, Path], None, None]:
     for src in paths:
         with CBZFile(src) as cfile:
             dst = root / _path_from_cinfo(cfile.info, pattern=pattern)
@@ -53,13 +54,13 @@ def _construct_rename_pairs(paths, *, root, pattern=_pattern_missing):
 
 _includes_missing = config['move_includes']
 
-def _construct_rename_extra(parents, includes=_includes_missing):
+def _construct_rename_extra(parents: List[Tuple[Path, Path]], includes: List[str] = _includes_missing) -> Generator[Tuple[Path, Path], None, None]:
     for inc in includes:
         for src, dst in parents:
             if (src / inc).exists():
                 yield (src / inc, dst / inc)
 
-def _rename_file(src, dst):
+def _rename_file(src: Path, dst: Path) -> None:
     dst.parent.mkdir(parents=True, exist_ok=True)
 
     try:
@@ -81,7 +82,7 @@ _validate_missing = False
 _dryrun_missing = False
 
 def cbrename(
-    files: list[Path],
+    files: List[Path],
     root: Path = _root_missing,
     validate: bool = _validate_missing,
     dryrun: bool = _dryrun_missing
@@ -92,7 +93,7 @@ def cbrename(
 
     for src, _ in pairs:
         if not src.exists():
-            raise FileNotFoundError('file "{src}" does not exist!')
+            raise FileNotFoundError(f'file "{src}" does not exist!')
         # TODO detect or prevent collisions and overwrites
 
     parents = set((src.parent, dst.parent) for src, dst in pairs if src.parent != dst.parent)

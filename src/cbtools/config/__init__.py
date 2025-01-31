@@ -1,7 +1,13 @@
 import json
 import os
+import logging
 
-DEFAULT_CONFIG = {
+from typing import Dict, Any
+
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
+
+DEFAULT_CONFIG: Dict[str, Any] = {
     "test_mode": False,
     "library_path": "/library",
     "seriesid_filename": ".anilist.txt",
@@ -9,13 +15,17 @@ DEFAULT_CONFIG = {
     "rename_pattern": "${Series} (${Year})/${Series} ${Volume}",
 }
 
-CONFIG_FILE_PATH = os.getenv('CONFIG_FILE_PATH', os.getcwd() + '/config.json')
+CONFIG_FILE_PATH: str = os.getenv('CONFIG_FILE_PATH', os.getcwd() + '/config.json')
 
-def load_config():
+def load_config() -> Dict[str, Any]:
+    config = DEFAULT_CONFIG
+
     try:
         with open(CONFIG_FILE_PATH, 'r') as f:
-            return json.load(f)
+            DEFAULT_CONFIG.update(json.load(f))
     except (FileNotFoundError, json.JSONDecodeError):
-        return DEFAULT_CONFIG
+        logger.warning('Failed to load config, using defaults')
 
-config = load_config()
+    return config
+
+config: Dict[str, Any] = load_config()
