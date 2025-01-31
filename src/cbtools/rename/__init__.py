@@ -44,18 +44,14 @@ def _path_from_cinfo(cinfo, pattern, default=_default_missing):
 
 _pattern_missing = config['rename_pattern']
 
-def _construct_path(cinfo, *, root, pattern=_pattern_missing):
-    path = _path_from_cinfo(cinfo, pattern)
-    return (root / path)
-
-def _construct_rename_pairs(paths, *, root):
+def _construct_rename_pairs(paths, *, root, pattern=_pattern_missing):
     for src in paths:
         with CBZFile(src) as cfile:
-            dst = _construct_path(cfile.info, root=root)
+            dst = root / _path_from_cinfo(cfile.info, pattern=pattern)
             if src != dst:
                 yield src, dst
 
-_includes_missing = ()
+_includes_missing = config['move_includes']
 
 def _construct_rename_extra(parents, includes=_includes_missing):
     for inc in includes:
@@ -80,10 +76,11 @@ def _rename_file(src, dst):
     shutil.copyfile(src, dst)
     src.unlink()
 
+_root_missing = pathlib.Path('')
 _validate_missing = False
 _dryrun_missing = False
 
-def cbrename(files, *, root, validate=_validate_missing, dryrun=_dryrun_missing):
+def cbrename(files, *, root=_root_missing, validate=_validate_missing, dryrun=_dryrun_missing):
     paths = expand_paths(files)
     pairs = set(_construct_rename_pairs(paths, root=root))
 
@@ -93,7 +90,7 @@ def cbrename(files, *, root, validate=_validate_missing, dryrun=_dryrun_missing)
         # TODO detect or prevent collisions and overwrites
 
     parents = set((src.parent, dst.parent) for src, dst in pairs if src.parent != dst.parent)
-    extra = set(_construct_rename_extra(parents, includes=config['move_includes']))
+    extra = set(_construct_rename_extra(parents))
     union = pairs.union(extra)
 
     for src, dst in sorted(union, key=itemgetter(1)):
