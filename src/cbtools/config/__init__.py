@@ -19,6 +19,7 @@ CONFIG_FILE_PATH: str = os.getenv('CONFIG_FILE_PATH', os.getcwd() + '/config.jso
 
 def load_config() -> Dict[str, Any]:
     config = DEFAULT_CONFIG
+
     try:
         with open(CONFIG_FILE_PATH, 'r') as f:
             DEFAULT_CONFIG.update(json.load(f))
