@@ -91,11 +91,11 @@ def cbrename(files, *, root, validate=False, dryrun=False):
 
     for src, dst in sorted(union, key=itemgetter(1)):
         if dryrun:
-            print(f'(dryrun) "{src}" -> "{dst}"')
+            print(f'dryrun) "{src}" -> "{dst}"')
         else:
             rename_file(src, dst)
 
-    try:
-        next(src.parent.iterdir())
-    except StopIteration:
-        src.parent.rmdir()
+            try:
+                next(src.parent.iterdir())
+            except StopIteration:
+                src.parent.rmdir()
