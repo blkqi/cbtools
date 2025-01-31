@@ -14,6 +14,9 @@ logger.addHandler(logging.NullHandler())
 def _allowed_chars():
     return string.ascii_letters + string.digits + " _-~.'!@#$%^&()[]{}"
 
+def _sanitize_paths(value):
+    return ''.join(c for c in value if c in _allowed_chars())
+
 def _formatters():
     def volume_formatter(volume):
         i, f = str(volume).split('.') if '.' in volume else (str(volume), None)
@@ -26,14 +29,9 @@ def _formatters():
         ('Volume', volume_formatter),
     )
 
-def _sanitize_paths(value):
-    return ''.join(c for c in value if c in _allowed_chars())
-
 _default_missing = ''
 
-def _path_from_cinfo(cfile, pattern, default=_default_missing):
-    cinfo = cfile.info
-
+def _path_from_cinfo(cinfo, pattern, default=_default_missing):
     # prefer localized series to series
     cinfo['Series'] = cinfo.get('LocalizedSeries') or cinfo.get('Series')
 
@@ -46,14 +44,14 @@ def _path_from_cinfo(cfile, pattern, default=_default_missing):
 
 _pattern_missing = config['rename_pattern']
 
-def _construct_path(cfile, *, root, pattern=_pattern_missing):
-    path = _path_from_cinfo(cfile, pattern)
+def _construct_path(cinfo, *, root, pattern=_pattern_missing):
+    path = _path_from_cinfo(cinfo, pattern)
     return (root / path)
 
 def _construct_rename_pairs(paths, *, root):
     for src in paths:
         with CBZFile(src) as cfile:
-            dst = _construct_path(cfile, root=root)
+            dst = _construct_path(cfile.info, root=root)
             if src != dst:
                 yield src, dst
 
