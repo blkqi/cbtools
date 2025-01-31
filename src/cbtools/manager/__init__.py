@@ -4,9 +4,10 @@ import pathlib
 import time
 import threading
 
+from typing import Set
 from waitress import serve
 from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler
+from watchdog.events import FileSystemEventHandler, FileSystemEvent
 
 from cbtools.config import config
 from cbtools.core import CBZFile, expand_paths
@@ -19,8 +20,10 @@ logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 logger.setLevel(logging.DEBUG if config['test_mode'] else logging.INFO)
 
+processing_items: Set[pathlib.Path] = set()
+
 class LibraryHandler(FileSystemEventHandler):
-    def on_created(self, event):
+    def on_created(self, event: FileSystemEvent) -> None:
         path = pathlib.Path(event.src_path)
 
         if path.parent in processing_items:
@@ -31,7 +34,7 @@ class LibraryHandler(FileSystemEventHandler):
             logger.debug(f'CBZ file {path.name} updated in {path.parent}')
             manager_queue.enqueue(path.parent)
 
-    def on_modified(self, event):
+    def on_modified(self, event: FileSystemEvent) -> None:
         path = pathlib.Path(event.src_path)
 
         if path.parent in processing_items:
@@ -42,7 +45,7 @@ class LibraryHandler(FileSystemEventHandler):
             logger.debug(f"{config['seriesid_filename']} update in {path.parent}")
             manager_queue.enqueue(path.parent)
 
-async def worker():
+async def worker() -> None:
     while True:
         path = manager_queue.dequeue()
         elapsed = 0
@@ -55,7 +58,7 @@ async def worker():
 
             # TODO: these i/o bound ops should run async
             cbtag([path], dryrun=config['test_mode'])
-            cbrename([path], dryrun=config['test_mode'], path=config['library_path'])
+            cbrename([path], dryrun=config['test_mode'], root=config['library_path'])
 
             processing_items.remove(path)
             end = time.time()
@@ -64,12 +67,12 @@ async def worker():
         if elapsed < 2:
             await asyncio.sleep(2 - elapsed)
 
-def cbmanager():
+def cbmanager() -> None:
     handler = LibraryHandler()
     observer = Observer()
     observer.schedule(handler, path=config['library_path'], recursive=True)
     observer.start()
-    thread = threading.Thread(target=serve(app, host='0.0.0.0', port=8080), daemon=True)
+    thread = threading.Thread(target=serve, args=(app,), kwargs={'host': '0.0.0.0', 'port': 8080}, daemon=True)
     thread.start()
 
     try:
@@ -79,5 +82,3 @@ def cbmanager():
 
     observer.stop()
     observer.join()
-
-processing_items = set()

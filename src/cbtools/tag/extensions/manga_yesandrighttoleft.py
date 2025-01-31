@@ -1,4 +1,6 @@
+from typing import Dict, Any
+
 # This extension sets the 'Manga' field to 'YesAndRightToLeft'
 
-def extension(cinfo, data):
+def extension(cinfo: Dict[str, Any], data: Dict[str, Any]) -> None:
     cinfo['Manga'] = 'YesAndRightToLeft'
