@@ -1,9 +1,9 @@
 import os
-import string
 import shutil
 import pathlib
 import logging
 
+from string import Template
 from cbtools.config import config
 from cbtools.core import CBZFile, expand_paths
 
@@ -11,84 +11,86 @@ logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
 ARG_PATTERN_DEFAULT = '${Series} (${Year})/${Series} ${Volume}'
+FILENAME_SUFFIX = '.cbz'
+ALLOWED_CHARS = string.ascii_letters + string.digits + " _-~.'!@#$%^&()[]{}"
 
-class CBZRenamer(object):
-    FILENAME_SUFFIX = '.cbz'
-    ALLOWED_CHARS = string.ascii_letters + string.digits + " _-~.'!@#$%^&()[]{}"
+def cbrename_format(cinfo):
+    formatters = {'Series': str,
+                  'Volume': lambda x: f'V{int(x.split('.')[0]):02}{f'.{x.split('.')[-1]}' if '.' in x else ''}',
+                  'Writer': str,
+                  'Year':   str}
 
-    def __init__(self, pattern, default=''):
-        self._template = string.Template(pattern)
-        self._defaults = {key: default for key in self._template.get_identifiers()}
+    # prefer localized series to series
+    cinfo['Series'] = cinfo.get('LocalizedSeries') or cinfo.get('Series')
 
-    def _substitute(self, cfile):
-        cinfo = cfile.info
-        formatters = {'Series': str,
-                      'Volume': lambda x: f'V{int(x.split('.')[0]):02}{f'.{x.split('.')[-1]}' if '.' in x else ''}',
-                      'Writer': str,
-                      'Year':   str}
-        cinfo['Series'] = cinfo.get('LocalizedSeries') or cinfo.get('Series')
-        inputs = {key: self._santiize(fun(cinfo.get(key)))
-              for key, fun in formatters.items() if key in cinfo}
-        return self._template.substitute(self._defaults, **inputs).strip()
+    mapval = lambda k, f: cbrename_sanitize(f(cinfo.get(k)))
+    return {k: mapval(k, f) for k, f in formatters.items() if k in cinfo}
 
-    def _santiize(self, value):
-        return ''.join(c for c in value if c in self.ALLOWED_CHARS)
+def cbrename_substitute(cfile, pattern, default=''):
+    template = Template(pattern)
+    defaults = {key: default for key in template.get_identifiers()}
 
-    def path(self, cfile, path=pathlib.Path('')):
-        stem = pathlib.Path(self._substitute(cfile))
-        return (path / stem).with_suffix(stem.suffix + self.FILENAME_SUFFIX)
+    s = template.substitute(defaults, **cbrename_format(cfile.info))
+    return pathlib.Path(s.strip())
 
-    def rename(src, dst):
-        # create required directory structure
-        dst.parent.mkdir(parents=True, exist_ok=True)
+def cbrename_sanitize(value):
+    return ''.join(c for c in value if c in ALLOWED_CHARS)
 
-        try:
-            src.rename(dst)
-        except OSError as e:
-            if e.errno == 18:
-                pass
-            else:
-                raise
+def cbrename_path(cfile, pattern, *, root):
+    stem = cbrename_substitute(cfile, pattern)
+    suffix = cfile.Path().suffix
+    return (root / stem).with_suffix(suffix)
+
+def cbrename_rename(src, dst):
+    dst.parent.mkdir(parents=True, exist_ok=True)
+
+    try:
+        src.rename(dst)
+    except OSError as e:
+        if e.errno == 18:
+            pass
         else:
-            return
+            raise
+    else:
+        return
 
-        # errno 18: target filesystem differs - fallback to copy file
-        shutil.copyfile(src, dst)
-        src.unlink()
+    logger.debug('errno 18: target filesystem differs - fallback to copy file')
+    shutil.copyfile(src, dst)
+    src.unlink()
+
+def cbrename_pairs(paths, pattern, **kwds):
+    for src in paths:
+        with CBZFile(src) as cfile:
+            dst = cbrename_path(cfile, pattern, **kwds)
+            if src != dst:
+                yield src, dst
+
+def cbrename_extra(pairs, includes=()):
+    parents = set((src.parent, dst.parent) for src, dst in pairs)
+    for inc in includes:
+        for src, dst in parents:
+            if (src / inc).exists():
+                yield (src / inc, dst / inc)
 
 def cbrename(files, pattern=ARG_PATTERN_DEFAULT, validate=False, dryrun=False, **kwds):
-    files = expand_paths(files)
-    renamer = CBZRenamer(pattern)
-    parents = {}
+    paths = expand_paths(files)
+    pairs = set(cbrename_pairs(paths, pattern, **kwds))
 
-    for path in files:
-        with CBZFile(path) as cfile:
-            newpath = renamer.path(cfile, **kwds)
+    for src, _ in pairs:
+        if not src.exists():
+            raise FileNotFoundError('file "{src}" does not exist!')
+        # TODO detect or prevent collisions and overwrites
 
-        if path == newpath:
-            continue
-        elif dryrun:
-            print(f'(dryrun) "{path}" -> "{newpath}"')
+    extra = set(cbrename_extra(pairs, includes=config['move_includes']))
+    union = pairs.union(extra)
+
+    for src, dst in sorted(union):
+        if dryrun:
+            print(f'(dryrun) "{src}" -> "{dst}"')
         else:
-            CBZRenamer.rename(path, newpath)
+            cbrename_rename(src, dst)
 
-        parents[pathlib.Path(path).parent] = pathlib.Path(newpath).parent
-
-    for path, newpath in parents.items():
-        for include in config['move_includes']:
-            include_path = path / include
-
-            if include_path.exists():
-                new_include_path = newpath / include
-
-                if include_path == new_include_path:
-                    continue
-
-                if dryrun:
-                    print(f'(dryrun) "{include_path}" -> "{new_include_path}"')
-                else:
-                    include_path.rename(new_include_path)
-
-        if next(path.iterdir(), None) is None:
-            if not dryrun:
-                path.rmdir()
+    try:
+        next(src.parent.iterdir())
+    except StopIteration:
+        src.parent.rmdir()
