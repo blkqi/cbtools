@@ -11,13 +11,14 @@ from waitress import serve
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler, FileSystemEvent
 
-from cbtools.config import config
+from cbtools.config import config, create_log_dir
 from cbtools.core import CBZFile, expand_paths
 from cbtools.manager.api import app
 from cbtools.manager.queue import manager_queue
 from cbtools.tag import AniList, cbtag
 from cbtools.rename import cbrename
 
+create_log_dir()
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 logger.addHandler(TimedRotatingFileHandler(

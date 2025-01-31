@@ -34,5 +34,3 @@ def create_log_dir() -> None:
         config['log_path'].mkdir(exist_ok=True)
 
 config: Dict[str, Any] = load_config()
-create_log_dir()
-
