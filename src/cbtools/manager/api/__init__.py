@@ -3,7 +3,7 @@ import pathlib
 from flask import Flask
 
 from cbtools.config import config
-from cbtools.manager import manager_queue
+from cbtools.manager.queue import manager_queue
 
 app = Flask(__name__)
 
