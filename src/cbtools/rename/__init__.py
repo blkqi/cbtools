@@ -11,14 +11,23 @@ from operator import itemgetter
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
-__allowed_chars = string.ascii_letters + string.digits + " _-~.'!@#$%^&()[]{}"
-__formatters = {'Series': str,
-                'Volume': lambda x: f'V{int(x.split('.')[0]):02}{f'.{x.split('.')[-1]}' if '.' in x else ''}',
-                'Writer': str,
-                'Year':   str}
+def allowed_chars():
+    return string.ascii_letters + string.digits + " _-~.'!@#$%^&()[]{}"
+
+def formatters():
+    def volume_formatter(volume):
+        i, f = str(volume).split('.') if '.' in volume else (str(volume), None)
+        return f'V{int(i):02}' + str(f'.{f}' if f else '')
+
+    return (
+        ('Series', str),
+        ('Writer', str),
+        ('Year', str),
+        ('Volume', volume_formatter),
+    )
 
 def sanitize_paths(value):
-    return ''.join(c for c in value if c in __allowed_chars)
+    return ''.join(c for c in value if c in allowed_chars())
 
 def format_cinfo(cfile, pattern, default=''):
     cinfo = cfile.info
@@ -28,15 +37,14 @@ def format_cinfo(cfile, pattern, default=''):
 
     template = string.Template(pattern)
     defaults = {key: default for key in template.get_identifiers()}
-    values = {k: sanitize_paths(f(cinfo[k])) for k, f in __formatters.items() if k in cinfo}
+    values = {k: sanitize_paths(f(cinfo[k])) for k, f in formatters() if k in cinfo}
     strpath = template.substitute(defaults, **values)
 
-    return pathlib.Path(strpath.strip())
+    return pathlib.Path(strpath.strip() + '.cbz')
 
 def determine_path(cfile, *, root, pattern=config['rename_pattern']):
-    stem = format_cinfo(cfile, pattern)
-    suffix = cfile.Path().suffix
-    return (root / stem).with_suffix(suffix)
+    path = format_cinfo(cfile, pattern)
+    return (root / path)
 
 def determine_pairs(paths, *, root):
     for src in paths:
