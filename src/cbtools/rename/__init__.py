@@ -1,94 +1,112 @@
 import os
-import string
 import shutil
-import pathlib
+import string
 import logging
 
+from pathlib import Path
 from cbtools.config import config
 from cbtools.core import CBZFile, expand_paths
+from operator import itemgetter
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
-ARG_PATTERN_DEFAULT = '${Series} (${Year})/${Series} ${Volume}'
+def _allowed_chars():
+    return string.ascii_letters + string.digits + " _-~.'!@#$%^&()[]{}"
 
-class CBZRenamer(object):
-    FILENAME_SUFFIX = '.cbz'
-    ALLOWED_CHARS = string.ascii_letters + string.digits + " _-~.'!@#$%^&()[]{}"
+def _sanitize_paths(value):
+    return ''.join(c for c in value if c in _allowed_chars())
 
-    def __init__(self, pattern, default=''):
-        self._template = string.Template(pattern)
-        self._defaults = {key: default for key in self._template.get_identifiers()}
+def _formatters():
+    def volume_formatter(volume):
+        i, f = str(volume).split('.') if '.' in volume else (str(volume), None)
+        return f'V{int(i):02}' + str(f'.{f}' if f else '')
 
-    def _substitute(self, cfile):
-        cinfo = cfile.info
-        formatters = {'Series': str,
-                      'Volume': lambda x: f'V{int(x.split('.')[0]):02}{f'.{x.split('.')[-1]}' if '.' in x else ''}',
-                      'Writer': str,
-                      'Year':   str}
-        cinfo['Series'] = cinfo.get('LocalizedSeries') or cinfo.get('Series')
-        inputs = {key: self._santiize(fun(cinfo.get(key)))
-              for key, fun in formatters.items() if key in cinfo}
-        return self._template.substitute(self._defaults, **inputs).strip()
+    return (
+        ('Series', str),
+        ('Writer', str),
+        ('Year', str),
+        ('Volume', volume_formatter),
+    )
 
-    def _santiize(self, value):
-        return ''.join(c for c in value if c in self.ALLOWED_CHARS)
+_default_missing = ''
 
-    def path(self, cfile, path=pathlib.Path('')):
-        stem = pathlib.Path(self._substitute(cfile))
-        return (path / stem).with_suffix(stem.suffix + self.FILENAME_SUFFIX)
+def _path_from_cinfo(cinfo, pattern, default=_default_missing):
+    # prefer localized series to series
+    cinfo['Series'] = cinfo.get('LocalizedSeries') or cinfo.get('Series')
 
-    def rename(src, dst):
-        # create required directory structure
-        dst.parent.mkdir(parents=True, exist_ok=True)
+    template = string.Template(pattern)
+    defaults = {key: default for key in template.get_identifiers()}
+    values = {k: _sanitize_paths(f(cinfo[k])) for k, f in _formatters() if k in cinfo}
+    strpath = template.substitute(defaults, **values)
 
+    return Path(strpath.strip() + '.cbz')
+
+_pattern_missing = config['rename_pattern']
+
+def _construct_rename_pairs(paths, *, root, pattern=_pattern_missing):
+    for src in paths:
+        with CBZFile(src) as cfile:
+            dst = root / _path_from_cinfo(cfile.info, pattern=pattern)
+            if src != dst:
+                yield src, dst
+
+_includes_missing = config['move_includes']
+
+def _construct_rename_extra(parents, includes=_includes_missing):
+    for inc in includes:
+        for src, dst in parents:
+            if (src / inc).exists():
+                yield (src / inc, dst / inc)
+
+def _rename_file(src, dst):
+    dst.parent.mkdir(parents=True, exist_ok=True)
+
+    try:
+        src.rename(dst)
+    except OSError as e:
+        if e.errno == 18:
+            pass
+        else:
+            raise
+    else:
+        return
+
+    logger.debug('errno 18: target filesystem differs - fallback to copy file')
+    shutil.copyfile(src, dst)
+    src.unlink()
+
+_root_missing = Path('')
+_validate_missing = False
+_dryrun_missing = False
+
+def cbrename(
+    files: list[Path],
+    root: Path = _root_missing,
+    validate: bool = _validate_missing,
+    dryrun: bool = _dryrun_missing
+) -> None:
+
+    paths = expand_paths(files)
+    pairs = set(_construct_rename_pairs(paths, root=root))
+
+    for src, _ in pairs:
+        if not src.exists():
+            raise FileNotFoundError('file "{src}" does not exist!')
+        # TODO detect or prevent collisions and overwrites
+
+    parents = set((src.parent, dst.parent) for src, dst in pairs if src.parent != dst.parent)
+    extra = set(_construct_rename_extra(parents))
+    union = pairs.union(extra)
+
+    for src, dst in sorted(union, key=itemgetter(1)):
+        if dryrun:
+            print(f'dryrun) "{src}" -> "{dst}"')
+        else:
+            _rename_file(src, dst)
+
+    for src, _ in parents:
         try:
-            src.rename(dst)
-        except OSError as e:
-            if e.errno == 18:
-                pass
-            else:
-                raise
-        else:
-            return
-
-        # errno 18: target filesystem differs - fallback to copy file
-        shutil.copyfile(src, dst)
-        src.unlink()
-
-def cbrename(files, pattern=ARG_PATTERN_DEFAULT, validate=False, dryrun=False, **kwds):
-    files = expand_paths(files)
-    renamer = CBZRenamer(pattern)
-    parents = {}
-
-    for path in files:
-        with CBZFile(path) as cfile:
-            newpath = renamer.path(cfile, **kwds)
-
-        if path == newpath:
-            continue
-        elif dryrun:
-            print(f'(dryrun) "{path}" -> "{newpath}"')
-        else:
-            CBZRenamer.rename(path, newpath)
-
-        parents[pathlib.Path(path).parent] = pathlib.Path(newpath).parent
-
-    for path, newpath in parents.items():
-        for include in config['move_includes']:
-            include_path = path / include
-
-            if include_path.exists():
-                new_include_path = newpath / include
-
-                if include_path == new_include_path:
-                    continue
-
-                if dryrun:
-                    print(f'(dryrun) "{include_path}" -> "{new_include_path}"')
-                else:
-                    include_path.rename(new_include_path)
-
-        if next(path.iterdir(), None) is None:
-            if not dryrun:
-                path.rmdir()
+            next(src.iterdir())
+        except StopIteration:
+            src.rmdir()

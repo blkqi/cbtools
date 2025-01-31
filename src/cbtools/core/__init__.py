@@ -44,6 +44,9 @@ class CBZFile(zipfile.ZipFile):
         self.info = self._get_info()
         self.volume = self._parse_volume()
 
+    def Path(self):
+        return pathlib.Path(self.filename)
+
     def extractall(self, path=None, members=None, pwd=None, flatten=False):
         if not flatten:
             return super().extractall(path=path, members=members, pwd=pwd)

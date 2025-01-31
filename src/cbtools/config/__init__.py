@@ -5,7 +5,8 @@ DEFAULT_CONFIG = {
     "test_mode": False,
     "library_path": "/library",
     "seriesid_filename": ".anilist.txt",
-    "move_includes": [".anilist.txt", "cover.jpg"]
+    "move_includes": [".anilist.txt", "cover.jpg"],
+    "rename_pattern": "${Series} (${Year})/${Series} ${Volume}",
 }
 
 CONFIG_FILE_PATH = os.getenv('CONFIG_FILE_PATH', os.getcwd() + '/config.json')
