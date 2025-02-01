@@ -43,7 +43,7 @@ class CBZFile(zipfile.ZipFile):
     def __init__(self, file: Union[str, bytes], **kwds: Any) -> None:
         super(CBZFile, self).__init__(file, **kwds)
         self.info: ComicInfo = self._get_info()
-        self.volume: Optional[str] = self._parse_volume()
+        self.volume: Optional[str] = str(float(self._parse_volume())).removesuffix('.0')
 
     def Path(self) -> pathlib.Path:
         return pathlib.Path(self.filename)
@@ -88,11 +88,12 @@ class CBZFile(zipfile.ZipFile):
         filename_parts.reverse()
 
         for part in filename_parts:
-            found = re.search(r'^[vV]{1}\d+\.?\d*$', part)
+            if match := re.search(r'[vV](\d+\.?\d*)', part):
+                return match.group(1)
 
-            if found:
-                value = float(found.group(0)[1:])
-                return str(value).removesuffix(".0")
+        for part in filename_parts:
+            if match := re.search(r'(\d+)', part):
+                return match.group(1)
 
         return None
 
