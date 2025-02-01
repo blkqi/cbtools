@@ -144,8 +144,7 @@ def cbtag(files: List[str], series_id: Optional[int] = None, dryrun: bool = Fals
             series_id = _get_series_id(path)
 
             if not series_id:
-                logger.error(f"No series ID specified and no {config['tag.series_id_filename']} found in path!")
-                return
+                raise NameError(f"No series ID specified and no {config['tag.series_id_filename']} found in path!")
 
         if not cinfo:
             if not dryrun:
