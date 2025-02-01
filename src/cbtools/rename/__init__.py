@@ -10,7 +10,8 @@ from operator import itemgetter
 from collections import Counter
 from typing import List, Tuple, Generator, Dict, Any
 from cbtools.config import config
-from cbtools.core import CBZFile, expand_paths
+from cbtools.core import ComicArchive, expand_paths
+from operator import itemgetter
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
@@ -48,13 +49,13 @@ def _path_from_cinfo(cinfo: Dict[str, Any], default: str = _default_missing) -> 
 
 def _construct_rename_pairs(paths: List[Path], *, root: Path) -> Generator[Tuple[Path, Path], None, None]:
     for src in paths:
-        with CBZFile(src) as cfile:
-            if cfile.info:
-                dst = root / _path_from_cinfo(cfile.info)
-                if src != dst:
-                    yield src, dst
-            else:
-                logger.warning(f'file "{src}" contains no info xml - skipping rename')
+        cinfo = ComicArchive(src).info()
+        if cinfo:
+            dst = root / _path_from_cinfo(cinfo)
+            if src != dst:
+                yield src, dst
+        else:
+            logger.warning(f'file "{src}" contains no info xml - skipping rename')
 
 def _construct_rename_extra(parents: List[Tuple[Path, Path]]) -> Generator[Tuple[Path, Path], None, None]:
     for inc in config['rename.move_includes']:
