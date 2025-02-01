@@ -18,7 +18,6 @@ class ComicArchive(object):
 
     def __init__(self, filepath: Path):
         self.filepath = filepath
-        self.info = self.info()
 
         #TODO handle more type
         assert(self.filepath.suffix == '.cbz')
