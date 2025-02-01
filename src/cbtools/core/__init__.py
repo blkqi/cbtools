@@ -23,7 +23,11 @@ class ComicArchive(object):
         assert(self.filepath.suffix == '.cbz')
 
     def info(self):
-        return ComicInfo.parse(self.read([self._comic_info_name]))
+        data = self.read([self._comic_info_name])
+        if data.getbuffer().nbytes:
+            return ComicInfo.parse(data)
+        else:
+            return ComicInfo()
 
     def extract(self, targetdir: Path = Path(''), members: List[str] = []):
         process = subprocess.run(['7z', 'x', '-y', '-o' + targetdir, self.filepath] + members,
