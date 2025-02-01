@@ -113,7 +113,7 @@ class AniListResponse(dict):
             module = importlib.import_module(f'cbtools.tag.extensions.{extension}')
             module.extension(cinfo, self.media)
 
-def get_series_id(path: 'Path') -> Optional[int]:
+def _get_series_id(path: 'Path') -> Optional[int]:
     if path.is_file():
         path = path.parent
 
@@ -123,7 +123,7 @@ def get_series_id(path: 'Path') -> Optional[int]:
     except FileNotFoundError:
         return None
 
-def write_series_id(path: 'Path', series_id: int) -> None:
+def _write_series_id(path: 'Path', series_id: int) -> None:
     if not config['write_series_id_file']:
         return
 
@@ -141,7 +141,7 @@ def cbtag(files: List[str], series_id: Optional[int] = None, dryrun: bool = Fals
 
     for path in paths:
         if not series_id:
-            series_id = get_series_id(path)
+            series_id = _get_series_id(path)
 
             if not series_id:
                 logger.error(f"No series ID specified and no {config['series_id_filename']} found in path!")
@@ -149,7 +149,7 @@ def cbtag(files: List[str], series_id: Optional[int] = None, dryrun: bool = Fals
 
         if not cinfo:
             if not dryrun:
-                write_series_id(path.parent, series_id)
+                _write_series_id(path.parent, series_id)
 
             cinfo = AniList().search(series_id).to_cinfo()
 
