@@ -1,6 +1,6 @@
+import sys
 import dictdiffer
 import lxml.etree
-import pathlib
 import platform
 import re
 import shutil
@@ -8,21 +8,23 @@ import tempfile
 import subprocess
 import zipfile
 import importlib.resources
-import typing
 
+from pathlib import Path
 from typing import Any, Dict, Generator, List, Optional, Tuple, Union
 
 class ComicArchive(object):
-    _comic_info_file = 'ComicInfo.xml'
+    _comic_info_name = 'ComicInfo.xml'
 
     def __init__(self, filepath: Path):
         self.filepath = filepath
+        self.info = self.info()
 
-        #TODO check file suffix
+        #TODO handle more type
+        assert(self.filepath.suffix == '.cbz')
 
-    def extract(self, targetdir: Path = Path(''), members: Tuple[str] = ()):
+    def extract(self, targetdir: Path = Path(''), members: List[str] = []):
         try:
-            process = subprocess.Popen(['7z', 'x', '-y', '-o', targetdir, self.filepath] + members)
+            process = subprocess.Popen(['7z', 'x', '-y', '-o' + targetdir, self.filepath] + members,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT
             )
@@ -37,7 +39,7 @@ class ComicArchive(object):
 
     def add(self, paths: List[Path]):
         try:
-            process = subprocess.Popen(['7z', 'a', '-y', self.filepath] + paths
+            process = subprocess.Popen(['7z', 'a', '-y', self.filepath] + paths,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT
             )
@@ -52,14 +54,14 @@ class ComicArchive(object):
 
     def info(self):
         with tempfile.TemporaryDirectory() as tempdir:
-            self.extract(tempdir, self._comic_info_name)
-            comic_info_path = pathlib.Path(tempdir) / self._comic_info_name
-            with open(comic_info_path) as f:
-                return ComicInfo.parse(c)
+            self.extract(tempdir, [self._comic_info_name])
+
+            with open(Path(tempdir) / self._comic_info_name) as f:
+                return ComicInfo.parse(f)
             #TODO handle missing comic info
 
 class ComicInfo(dict):
-    XSD_FILENAME: pathlib.Path = importlib.resources.files(__name__).joinpath('ComicInfo.xsd')
+    XSD_FILENAME: Path = importlib.resources.files(__name__).joinpath('ComicInfo.xsd')
     XML_FILENAME: str = 'ComicInfo.xml'
 
     def __init__(self, *args: Any, **kwds: Any) -> None:
@@ -93,8 +95,8 @@ class CBZFile(zipfile.ZipFile):
         self.info: ComicInfo = self._get_info()
         self.volume: Optional[str] = str(float(self._parse_volume())).removesuffix('.0')
 
-    def Path(self) -> pathlib.Path:
-        return pathlib.Path(self.filename)
+    def Path(self) -> Path:
+        return Path(self.filename)
 
     def extractall(self, path: Optional[Union[str, bytes]] = None, members: Optional[List[zipfile.ZipInfo]] = None, pwd: Optional[bytes] = None, flatten: bool = False) -> None:
         if not flatten:
@@ -109,7 +111,7 @@ class CBZFile(zipfile.ZipFile):
 
     def update_cinfo(self, cinfo: ComicInfo) -> None:
         with tempfile.TemporaryDirectory() as tempdir:
-            temppath = pathlib.Path(tempdir) / 'cbz'
+            temppath = Path(tempdir) / 'cbz'
 
             with CBZFile(temppath, mode='w') as cbzwrite:
                 cbzwrite.writestr(ComicInfo.XML_FILENAME, cinfo.encode())
@@ -132,7 +134,7 @@ class CBZFile(zipfile.ZipFile):
         return ComicInfo()
 
     def _parse_volume(self) -> Optional[str]:
-        filename_parts = pathlib.Path(self.filename).stem.split(' ')
+        filename_parts = Path(self.filename).stem.split(' ')
         filename_parts.reverse()
 
         for part in filename_parts:
@@ -145,7 +147,7 @@ class CBZFile(zipfile.ZipFile):
 
         return None
 
-def expand_paths(paths: List[pathlib.Path]) -> Generator[pathlib.Path, None, None]:
+def expand_paths(paths: List[Path]) -> Generator[Path, None, None]:
     for path in paths:
         if '*' in path.name:
             yield from expand_paths(list(path.parent.glob(path.name)))

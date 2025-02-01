@@ -8,7 +8,7 @@ import argparse
 import logging
 
 from cbtools import configure_logging
-from cbtools.core import CBZFile, expand_paths
+from cbtools.core import ComicArchive, expand_paths
 
 PROG_NAME = 'cbinfo'
 configure_logging()
@@ -17,8 +17,8 @@ def cbinfo(files):
     files = expand_paths(files)
 
     for path in files:
-        with CBZFile(path) as cfile:
-            print(json.dumps(cfile.info, indent=2))
+        cfile = ComicArchive(path)
+        print(json.dumps(cfile.info, indent=2))
 
 def parse_args(argv=sys.argv):
     parser = argparse.ArgumentParser(prog=PROG_NAME)
