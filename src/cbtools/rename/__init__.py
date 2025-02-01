@@ -7,7 +7,6 @@ from pathlib import Path
 from cbtools.config import config
 from cbtools.core import CBZFile, expand_paths
 from operator import itemgetter
-from collections import Counter
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
@@ -97,14 +96,7 @@ def cbrename(
     for src, _ in pairs:
         if not src.exists():
             raise FileNotFoundError('file "{src}" does not exist!')
-        # TODO detect or prevent overwrites
-
-    collisions = set(k for k, v in Counter(x for _, x in pairs).items() if v > 1)
-    if collisions:
-        for src, dst in pairs:
-            if dst in collisions:
-                logger.error(f'rename of "{src}" to "{dst}" results in collision')
-        raise ValueError(f'filename collisions detected')
+        # TODO detect or prevent collisions and overwrites
 
     parents = set((src.parent, dst.parent) for src, dst in pairs if src.parent != dst.parent)
     extra = set(_construct_rename_extra(parents))
