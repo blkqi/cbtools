@@ -7,10 +7,14 @@ import pathlib
 import argparse
 import logging
 
+from cbtools.config import config
 from cbtools.core import CBZFile, expand_paths
 
 PROG_NAME = 'cbinfo'
 logger = logging.getLogger(PROG_NAME)
+handler = logging.StreamHandler()
+handler.setFormatter(logging.Formatter(config['logging.format']))
+logger.addHandler(handler)
 
 def cbinfo(files):
     files = expand_paths(files)
@@ -27,6 +31,7 @@ def parse_args(argv=sys.argv):
     return vars(args)
 
 def main():
+    logger.setLevel(config['logging.level'])
     args = parse_args()
 
     try:

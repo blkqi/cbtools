@@ -8,9 +8,14 @@ from cbtools.manager import cbmanager
 
 PROG_NAME = 'cbmanager'
 logger = logging.getLogger(PROG_NAME)
+handler = logging.StreamHandler()
+handler.setFormatter(logging.Formatter(config['logging.format']))
+logger.addHandler(handler)
 enable_file_logging(PROG_NAME)
 
 if __name__ == "__main__":
+    logger.setLevel(config['logging.level'])
+
     if config["manager.test_mode"]:
         logger.info('Running in test mode')
 

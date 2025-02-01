@@ -10,4 +10,4 @@ COPY LICENSE LICENSE
 
 RUN pip install /app --no-input --break-system-packages
 
-CMD ["tail", "-f", "/dev/null"]
+CMD ["cbmanager"]
