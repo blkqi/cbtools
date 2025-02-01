@@ -48,9 +48,12 @@ _pattern_missing = config['rename.pattern']
 def _construct_rename_pairs(paths: List[Path], *, root: Path, pattern: str = _pattern_missing) -> Generator[Tuple[Path, Path], None, None]:
     for src in paths:
         with CBZFile(src) as cfile:
-            dst = root / _path_from_cinfo(cfile.info, pattern=pattern)
-            if src != dst:
-                yield src, dst
+            if cfile.info:
+                dst = root / _path_from_cinfo(cfile.info, pattern=pattern)
+                if src != dst:
+                    yield src, dst
+            else:
+                logger.warning(f'file "{src}" contains no info xml - skipping rename')
 
 _includes_missing = config['rename.move_includes']
 
