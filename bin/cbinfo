@@ -7,10 +7,11 @@ import pathlib
 import argparse
 import logging
 
+from cbtools import configure_logging
 from cbtools.core import CBZFile, expand_paths
 
 PROG_NAME = 'cbinfo'
-logger = logging.getLogger(PROG_NAME)
+configure_logging()
 
 def cbinfo(files):
     files = expand_paths(files)

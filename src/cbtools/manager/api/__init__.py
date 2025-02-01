@@ -34,3 +34,15 @@ def flush():
     manager_queue.flush()
 
     return ("", 204)
+
+@app.route("/clear", methods=['POST'])
+def clear():
+    manager_queue.clear()
+
+    return ("", 204)
+
+@app.route("/list", methods=['GET'])
+def list_items():
+    items = manager_queue.list_items()
+
+    return items

@@ -5,10 +5,12 @@ import argparse
 import logging
 
 from pathlib import Path
+
+from cbtools import configure_logging
 from cbtools.rename import cbrename
 
 PROG_NAME = 'cbtools'
-logger = logging.getLogger(PROG_NAME)
+configure_logging()
 
 def parse_args(argv=sys.argv):
     parser = argparse.ArgumentParser(prog=PROG_NAME)
@@ -20,7 +22,7 @@ def parse_args(argv=sys.argv):
     args = parser.parse_args(argv[1:])
 
     if args.debug:
-        logging.getLogger().setLevel(logging.DEBUG)
+        logger.setLevel(logging.DEBUG)
 
     delattr(args, 'debug')
     return vars(args)
