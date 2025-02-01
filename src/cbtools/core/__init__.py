@@ -27,50 +27,32 @@ class ComicArchive(object):
         return ComicInfo.parse(self.read([self._comic_info_name]))
 
     def extract(self, targetdir: Path = Path(''), members: List[str] = []):
-        try:
-            process = subprocess.Popen(['7z', 'x', '-y', '-o' + targetdir, self.filepath] + members,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT
-            )
-        except FileNotFoundError:
-            raise RuntimeError(f'7z not available')
-
-        stdout, _ = process.communicate()
+        process = subprocess.run(['7z', 'x', '-y', '-o' + targetdir, self.filepath] + members,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT
+        )
 
         if process.returncode != 0:
-            sys.stderr.write(stdout.decode())
             raise RuntimeError(f'7z error code {process.returncode}')
 
     def read(self, members: List[str] = []):
-        try:
-            process = subprocess.Popen(['7z', 'x', '-y', '-so', self.filepath] + members,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT
-            )
-        except FileNotFoundError:
-            raise RuntimeError(f'7z not available')
-
-        stdout, _ = process.communicate()
+        process = subprocess.run(['7z', 'x', '-y', '-so', self.filepath] + members,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT
+        )
 
         if process.returncode != 0:
-            sys.stderr.write(stdout.decode())
             raise RuntimeError(f'7z error code {process.returncode}')
 
-        return BytesIO(stdout)
+        return BytesIO(process.stdout)
 
     def add(self, paths: List[Path]):
-        try:
-            process = subprocess.Popen(['7z', 'a', '-y', self.filepath] + paths,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT
-            )
-        except FileNotFoundError:
-            raise RuntimeError(f'7z not available')
-
-        stdout, _ = process.communicate()
+        process = subprocess.run(['7z', 'a', '-y', self.filepath] + paths,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT
+        )
 
         if process.returncode != 0:
-            sys.stderr.write(stdout.decode())
             raise RuntimeError(f'7z error code {process.returncode}')
 
 class ComicInfo(dict):
