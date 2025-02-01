@@ -5,10 +5,58 @@ import platform
 import re
 import shutil
 import tempfile
+import subprocess
 import zipfile
 import importlib.resources
+import typing
 
 from typing import Any, Dict, Generator, List, Optional, Tuple, Union
+
+class ComicArchive(object):
+    _comic_info_file = 'ComicInfo.xml'
+
+    def __init__(self, filepath: Path):
+        self.filepath = filepath
+
+        #TODO check file suffix
+
+    def extract(self, targetdir: Path = Path(''), members: Tuple[str] = ()):
+        try:
+            process = subprocess.Popen(['7z', 'x', '-y', '-o', targetdir, self.filepath] + members)
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT
+            )
+        except FileNotFoundError:
+            raise RuntimeError(f'7z not available')
+
+        stdout, _ = process.communicate()
+
+        if process.returncode != 0:
+            sys.stderr.write(stdout.decode())
+            raise RuntimeError(f'7z error code {process.returncode}')
+
+    def add(self, paths: List[Path]):
+        try:
+            process = subprocess.Popen(['7z', 'a', '-y', self.filepath] + paths
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT
+            )
+        except FileNotFoundError:
+            raise RuntimeError(f'7z not available')
+
+        stdout, _ = process.communicate()
+
+        if process.returncode != 0:
+            sys.stderr.write(stdout.decode())
+            raise RuntimeError(f'7z error code {process.returncode}')
+
+    def info(self):
+        with tempfile.TemporaryDirectory() as tempdir:
+            self.extract(tempdir, self._comic_info_name)
+            comic_info_path = pathlib.Path(tempdir) / self._comic_info_name
+            with open(comic_info_path) as f:
+                return ComicInfo.parse(c)
+            #TODO handle missing comic info
 
 class ComicInfo(dict):
     XSD_FILENAME: pathlib.Path = importlib.resources.files(__name__).joinpath('ComicInfo.xsd')
