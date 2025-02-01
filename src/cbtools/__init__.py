@@ -4,6 +4,9 @@ from logging.handlers import TimedRotatingFileHandler
 
 from cbtools.config import config
 
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
+
 def enable_file_logging(name: str) -> None:
     if not config['logging.path'].exists():
         config['logging.path'].mkdir(exist_ok=True)
