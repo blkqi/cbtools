@@ -14,6 +14,7 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     "library_path": "/library",
     "log_path": pathlib.Path(CONFIG_FILE_PATH).parent / 'logs',
     "seriesid_filename": ".anilist.txt",
+    "write_seriesid_file": False,
     "move_includes": [".anilist.txt", "cover.jpg"],
     "rename_pattern": "${Series} (${Year})/${Series} ${Volume}",
 }

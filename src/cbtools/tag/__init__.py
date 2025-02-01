@@ -123,6 +123,18 @@ def get_series_id(path: 'Path') -> Optional[int]:
     except FileNotFoundError:
         return None
 
+def write_series_id(path: 'Path', series_id: int) -> None:
+    if not config['write_seriesid_file']:
+        return
+
+    seriesid_file_path = path / config['seriesid_filename']
+
+    if seriesid_file_path.exists():
+        return
+
+    with open(seriesid_file_path, 'w') as file:
+        file.write(str(series_id))
+
 def cbtag(files: List[str], series_id: Optional[int] = None, dryrun: bool = False) -> None:
     paths = expand_paths(files)
     cinfo = None
@@ -136,6 +148,7 @@ def cbtag(files: List[str], series_id: Optional[int] = None, dryrun: bool = Fals
                 return
 
         if not cinfo:
+            write_series_id(path.parent, series_id)
             cinfo = AniList().search(series_id).to_cinfo()
 
         with CBZFile(path) as cfile:
