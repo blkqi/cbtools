@@ -6,7 +6,6 @@ import logging
 
 from pathlib import Path
 
-from cbtools.config import config
 from cbtools.rename import cbrename
 
 PROG_NAME = 'cbtools'

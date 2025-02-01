@@ -7,7 +7,6 @@ import pathlib
 import argparse
 import logging
 
-from cbtools.config import config
 from cbtools.core import CBZFile, expand_paths
 
 PROG_NAME = 'cbinfo'

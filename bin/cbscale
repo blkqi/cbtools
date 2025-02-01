@@ -9,7 +9,6 @@ import tempfile
 import subprocess
 import logging
 
-from cbtools.config import config
 from cbtools.core import CBZFile, ComicInfo, expand_paths
 
 PROG_NAME = 'cbscale'

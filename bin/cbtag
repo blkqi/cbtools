@@ -5,7 +5,6 @@ import pathlib
 import argparse
 import logging
 
-from cbtools.config import config
 from cbtools.tag import AniList, cbtag
 
 PROG_NAME = 'cbtag'
