@@ -1,21 +1,34 @@
 import json
+import logging
 import os
+import pathlib
 
-DEFAULT_CONFIG = {
-    "test_mode": False,
-    "library_path": "/library",
-    "seriesid_filename": ".anilist.txt",
-    "move_includes": [".anilist.txt", "cover.jpg"],
-    "rename_pattern": "${Series} (${Year})/${Series} ${Volume}",
+from typing import Dict, Any
+
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
+
+CONFIG_FILE_PATH: str = os.getenv('CONFIG_FILE_PATH', os.getcwd() + '/config.json')
+DEFAULT_CONFIG: Dict[str, Any] = {
+    "logging.path": pathlib.Path(CONFIG_FILE_PATH).parent / 'logs',
+    "logging.level": logging.INFO,
+    "manager.test_mode": False,
+    "manager.library_path": "/library",
+    "rename.move_includes": [".anilist.txt", "cover.jpg"],
+    "rename.pattern": "${Series} (${Year})/${Series} ${Volume}",
+    "tag.series_id_filename": ".anilist.txt",
+    "tag.write_series_id_file": False,
 }
 
-CONFIG_FILE_PATH = os.getenv('CONFIG_FILE_PATH', os.getcwd() + '/config.json')
+def load_config() -> Dict[str, Any]:
+    config = DEFAULT_CONFIG
 
-def load_config():
     try:
         with open(CONFIG_FILE_PATH, 'r') as f:
-            return json.load(f)
+            DEFAULT_CONFIG.update(json.load(f))
     except (FileNotFoundError, json.JSONDecodeError):
-        return DEFAULT_CONFIG
+        logger.warning('Failed to load config, using defaults')
 
-config = load_config()
+    return config
+
+config: Dict[str, Any] = load_config()
