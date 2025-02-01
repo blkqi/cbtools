@@ -55,8 +55,15 @@ async def worker() -> None:
 
             logger.debug(f'Processing {path}')
 
-            # TODO: these i/o bound ops should run async
-            cbtag([path], dryrun=config['manager.test_mode'])
+            # TODO: i/o bound ops should run async
+
+            try:
+                cbtag([path], dryrun=config['manager.test_mode'])
+            except NameError as e:
+                logger.error(e)
+                processing_items.remove(path)
+                continue
+
             cbrename([path], dryrun=config['manager.test_mode'], root=config['manager.library_path'])
 
             processing_items.remove(path)
