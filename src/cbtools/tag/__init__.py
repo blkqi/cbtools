@@ -148,7 +148,9 @@ def cbtag(files: List[str], series_id: Optional[int] = None, dryrun: bool = Fals
                 return
 
         if not cinfo:
-            write_series_id(path.parent, series_id)
+            if not dryrun:
+                write_series_id(path.parent, series_id)
+
             cinfo = AniList().search(series_id).to_cinfo()
 
         with CBZFile(path) as cfile:
