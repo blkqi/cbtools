@@ -10,7 +10,4 @@ PROG_NAME = 'cbmanager'
 enable_file_logging(PROG_NAME)
 
 if __name__ == "__main__":
-    if config["manager.test_mode"]:
-        logger.info('Running in test mode')
-
     cbmanager()
