@@ -118,21 +118,21 @@ def get_series_id(path: 'Path') -> Optional[int]:
         path = path.parent
 
     try:
-        with open(path / config['seriesid_filename']) as file:
+        with open(path / config['series_id_filename']) as file:
             return int(file.read().strip())
     except FileNotFoundError:
         return None
 
 def write_series_id(path: 'Path', series_id: int) -> None:
-    if not config['write_seriesid_file']:
+    if not config['write_series_id_file']:
         return
 
-    seriesid_file_path = path / config['seriesid_filename']
+    series_id_file_path = path / config['series_id_filename']
 
-    if seriesid_file_path.exists():
+    if series_id_file_path.exists():
         return
 
-    with open(seriesid_file_path, 'w') as file:
+    with open(series_id_file_path, 'w') as file:
         file.write(str(series_id))
 
 def cbtag(files: List[str], series_id: Optional[int] = None, dryrun: bool = False) -> None:
@@ -144,7 +144,7 @@ def cbtag(files: List[str], series_id: Optional[int] = None, dryrun: bool = Fals
             series_id = get_series_id(path)
 
             if not series_id:
-                logger.error(f"No series ID specified and no {config['seriesid_filename']} found in path!")
+                logger.error(f"No series ID specified and no {config['series_id_filename']} found in path!")
                 return
 
         if not cinfo:

@@ -52,8 +52,8 @@ class LibraryHandler(FileSystemEventHandler):
             logger.debug(f'Skipping {path.name} as the folder is currently processing')
             return
 
-        if path.name == config['seriesid_filename']:
-            logger.debug(f"{config['seriesid_filename']} update in {path.parent}")
+        if path.name == config['series_id_filename']:
+            logger.debug(f"{config['series_id_filename']} update in {path.parent}")
             manager_queue.enqueue(path.parent)
 
 async def worker() -> None:
