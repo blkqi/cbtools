@@ -30,8 +30,4 @@ def load_config() -> Dict[str, Any]:
 
     return config
 
-def create_log_dir() -> None:
-    if not config['log_path'].exists():
-        config['log_path'].mkdir(exist_ok=True)
-
 config: Dict[str, Any] = load_config()
