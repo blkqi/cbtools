@@ -11,7 +11,7 @@ logging.basicConfig(
     format=LOG_FORMAT,
 )
 
-def enable_file_logging(name: str, level: str = None) -> None:
+def enable_file_logging(name: str) -> None:
     if not config['logging.path'].exists():
         config['logging.path'].mkdir(exist_ok=True)
 
@@ -26,4 +26,3 @@ def enable_file_logging(name: str, level: str = None) -> None:
     )
     handler.setFormatter(logging.Formatter(LOG_FORMAT))
     logger.addHandler(handler)
-    logger.setLevel(level or config['logging.level'])
