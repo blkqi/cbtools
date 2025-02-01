@@ -43,7 +43,7 @@ def _path_from_cinfo(cinfo: Dict[str, Any], pattern: str, default: str = _defaul
 
     return Path(strpath.strip() + '.cbz')
 
-_pattern_missing = config['rename_pattern']
+_pattern_missing = config['rename.pattern']
 
 def _construct_rename_pairs(paths: List[Path], *, root: Path, pattern: str = _pattern_missing) -> Generator[Tuple[Path, Path], None, None]:
     for src in paths:
@@ -52,7 +52,7 @@ def _construct_rename_pairs(paths: List[Path], *, root: Path, pattern: str = _pa
             if src != dst:
                 yield src, dst
 
-_includes_missing = config['move_includes']
+_includes_missing = config['rename.move_includes']
 
 def _construct_rename_extra(parents: List[Tuple[Path, Path]], includes: List[str] = _includes_missing) -> Generator[Tuple[Path, Path], None, None]:
     for inc in includes:

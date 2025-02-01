@@ -10,13 +10,14 @@ logger.addHandler(logging.NullHandler())
 
 CONFIG_FILE_PATH: str = os.getenv('CONFIG_FILE_PATH', os.getcwd() + '/config.json')
 DEFAULT_CONFIG: Dict[str, Any] = {
-    "test_mode": False,
-    "library_path": "/library",
-    "log_path": pathlib.Path(CONFIG_FILE_PATH).parent / 'logs',
-    "series_id_filename": ".anilist.txt",
-    "write_series_id_file": False,
-    "move_includes": [".anilist.txt", "cover.jpg"],
-    "rename_pattern": "${Series} (${Year})/${Series} ${Volume}",
+    "logging.path": pathlib.Path(CONFIG_FILE_PATH).parent / 'logs',
+    "logging.level": logging.INFO,
+    "manager.test_mode": False,
+    "manager.library_path": "/library",
+    "rename.move_includes": [".anilist.txt", "cover.jpg"],
+    "rename.pattern": "${Series} (${Year})/${Series} ${Volume}",
+    "tag.series_id_filename": ".anilist.txt",
+    "tag.write_series_id_file": False,
 }
 
 def load_config() -> Dict[str, Any]:
@@ -29,9 +30,5 @@ def load_config() -> Dict[str, Any]:
         logger.warning('Failed to load config, using defaults')
 
     return config
-
-def create_log_dir() -> None:
-    if not config['log_path'].exists():
-        config['log_path'].mkdir(exist_ok=True)
 
 config: Dict[str, Any] = load_config()

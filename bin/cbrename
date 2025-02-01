@@ -20,14 +20,12 @@ def parse_args(argv=sys.argv):
     args = parser.parse_args(argv[1:])
 
     if args.debug:
-        logger.setLevel(logging.DEBUG)
+        logging.getLogger().setLevel(logging.DEBUG)
 
     delattr(args, 'debug')
     return vars(args)
 
 def main():
-    logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
-
     args = parse_args()
 
     try:

@@ -4,32 +4,20 @@ import pathlib
 import time
 import threading
 
-from logging import Formatter
-from logging.handlers import TimedRotatingFileHandler
 from typing import Set
 from waitress import serve
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler, FileSystemEvent
 
-from cbtools.config import config, create_log_dir
+from cbtools.config import config
 from cbtools.core import CBZFile, expand_paths
 from cbtools.manager.api import app
 from cbtools.manager.queue import manager_queue
 from cbtools.tag import AniList, cbtag
 from cbtools.rename import cbrename
 
-create_log_dir()
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
-logger.addHandler(TimedRotatingFileHandler(
-    filename=config['log_path'] / 'cbmanager.log',
-    when='D',
-    interval=1,
-    backupCount=6,
-    encoding='utf-8',
-    delay=False,
-))
-logger.setLevel(logging.DEBUG)
 
 processing_items: Set[pathlib.Path] = set()
 
@@ -52,8 +40,8 @@ class LibraryHandler(FileSystemEventHandler):
             logger.debug(f'Skipping {path.name} as the folder is currently processing')
             return
 
-        if path.name == config['series_id_filename']:
-            logger.debug(f"{config['series_id_filename']} update in {path.parent}")
+        if path.name == config['tag.series_id_filename']:
+            logger.debug(f"{config['tag.series_id_filename']} update in {path.parent}")
             manager_queue.enqueue(path.parent)
 
 async def worker() -> None:
@@ -68,8 +56,8 @@ async def worker() -> None:
             logger.debug(f'Processing {path}')
 
             # TODO: these i/o bound ops should run async
-            cbtag([path], dryrun=config['test_mode'])
-            cbrename([path], dryrun=config['test_mode'], root=config['library_path'])
+            cbtag([path], dryrun=config['manager.test_mode'])
+            cbrename([path], dryrun=config['manager.test_mode'], root=config['manager.library_path'])
 
             processing_items.remove(path)
             end = time.time()
@@ -81,7 +69,7 @@ async def worker() -> None:
 def cbmanager() -> None:
     handler = LibraryHandler()
     observer = Observer()
-    observer.schedule(handler, path=config['library_path'], recursive=True)
+    observer.schedule(handler, path=config['manager.library_path'], recursive=True)
     observer.start()
     thread = threading.Thread(target=serve, args=(app,), kwargs={'host': '0.0.0.0', 'port': 8080}, daemon=True)
     thread.start()
