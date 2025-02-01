@@ -4,10 +4,11 @@ import string
 import logging
 
 from pathlib import Path
+from operator import itemgetter
+from collections import Counter
 from typing import List, Tuple, Generator, Dict, Any
 from cbtools.config import config
 from cbtools.core import CBZFile, expand_paths
-from operator import itemgetter
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
@@ -77,36 +78,21 @@ def _rename_file(src: Path, dst: Path) -> None:
     src.unlink()
 
 def _check_has_errors(pairs: Tuple[Path, Path]) -> bool:
-    errors_notfound = set()
-    errors_exists = set()
-    errors_collision = set()
-    checklist_collision = set()
+    errors = False
 
-    for src, dst in pairs:
-        if not src.exists():
-            errors_notfound.add(src)
+    for path in (src for src, _ in pairs if not src.exists()):
+        logger.error(f'Source {path} doesn\'t exist!')
+        errors |= True
 
-        if dst.exists():
-           errors_exists.add(dst)
+    for path in (dst for _, dst in pairs if dst.exists()):
+        logger.error(f'Destination {path} already exists!')
+        errors |= True
 
-        if dst in checklist_collision:
-            errors_collision.add(dst)
+    for path in (key for key, val in Counter(dst for _, dst in pairs).items() if val > 1):
+        logger.error(f'More than one file would be renamed to {path}!')
+        errors |= True
 
-        checklist_collision.add(dst)
-
-    if errors_exists or errors_collision or errors_notfound:
-        for path in errors_notfound:
-            logger.error(f'Source {path} doesn\'t exist!')
-
-        for path in errors_exists:
-            logger.error(f'Destination {path} already exists!')
-
-        for path in errors_collision:
-            logger.error(f'More than one file would be renamed to {path}!')
-
-        return True
-
-    return False
+    return errors
 
 def rename(files: List[Path], root: Path = Path(''), dryrun: bool = False) -> None:
     paths = expand_paths(files)
@@ -121,7 +107,7 @@ def rename(files: List[Path], root: Path = Path(''), dryrun: bool = False) -> No
 
     for src, dst in sorted(union, key=itemgetter(1)):
         if dryrun:
-            print(f'dryrun) "{src}" -> "{dst}"')
+            print(f'(dryrun) "{src}" -> "{dst}"')
         else:
             _rename_file(src, dst)
 
