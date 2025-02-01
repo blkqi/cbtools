@@ -13,11 +13,11 @@ def info():
 
 @app.route("/rescan", methods=['POST'])
 def rescan():
-    library = pathlib.Path(config['library_path'])
+    library = pathlib.Path(config['manager.library_path'])
     body = request.get_json(force=True, silent=True) or {}
 
     if body.get('path'):
-        path = pathlib.Path(config['library_path']) / body['path']
+        path = pathlib.Path(config['manager.library_path']) / body['path']
 
         if path.exists():
             manager_queue.enqueue(path)

@@ -4,29 +4,26 @@ from logging.handlers import TimedRotatingFileHandler
 
 from cbtools.config import config
 
-_logger = logging.getLogger()
-_logger.setLevel(logging.DEBUG)
-_formatter = logging.Formatter(
-    '%(asctime)s [%(levelname)8s] %(message)s (%(filename)s:%(lineno)s)'
+LOG_FORMAT = '%(asctime)s [%(levelname)8s] %(message)s (%(name)s :: %(filename)s:%(lineno)s)'
+
+logging.basicConfig(
+    level=config['logging.level'],
+    format=LOG_FORMAT,
 )
-_handler = logging.StreamHandler()
-_handler.setFormatter(_formatter)
-_logger.addHandler(_handler)
 
-class FileHandler(TimedRotatingFileHandler):
-    def __init__(self, name: str):
-        self._create_log_dir()
-        super().__init__(
-            filename=config['log_path'] / f'{name}.log',
-            when='D',
-            interval=1,
-            backupCount=6,
-            encoding='utf-8',
-            delay=False,
-        )
-        self.setFormatter(_formatter)
+def enable_file_logging(name: str, level: str = None) -> None:
+    if not config['logging.path'].exists():
+        config['logging.path'].mkdir(exist_ok=True)
 
-    @staticmethod
-    def _create_log_dir() -> None:
-        if not config['log_path'].exists():
-            config['log_path'].mkdir(exist_ok=True)
+    logger = logging.getLogger()
+    handler = TimedRotatingFileHandler(
+        filename=config['logging.path'] / f'{name}.log',
+        when='D',
+        interval=1,
+        backupCount=6,
+        encoding='utf-8',
+        delay=False,
+    )
+    handler.setFormatter(logging.Formatter(LOG_FORMAT))
+    logger.addHandler(handler)
+    logger.setLevel(level or config['logging.level'])

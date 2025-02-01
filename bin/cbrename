@@ -26,7 +26,7 @@ def parse_args(argv=sys.argv):
     return vars(args)
 
 def main():
-    logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+    logger.setLevel(logging.INFO)
 
     args = parse_args()
 
