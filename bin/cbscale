@@ -14,9 +14,6 @@ from cbtools.core import CBZFile, ComicInfo, expand_paths
 
 PROG_NAME = 'cbscale'
 logger = logging.getLogger(PROG_NAME)
-handler = logging.StreamHandler()
-handler.setFormatter(logging.Formatter(config['logging.format']))
-logger.addHandler(handler)
 
 WAIFU2X_BIN = os.getenv('WAIFU2X_BIN', '/usr/bin/waifu2x-ncnn-vulkan')
 WAIFU2X_MODEL = os.getenv('WAIFU2X_MODEL', '/usr/share/waifu2x-ncnn-vulkan/models-upconv_7_anime_style_art_rgb')
@@ -98,7 +95,6 @@ def parse_args(argv=sys.argv):
     return vars(args)
 
 def main():
-    logger.setLevel(config['logging.level'])
     args = parse_args()
 
     try:

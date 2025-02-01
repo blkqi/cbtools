@@ -10,9 +10,6 @@ from cbtools.tag import AniList, cbtag
 
 PROG_NAME = 'cbtag'
 logger = logging.getLogger(PROG_NAME)
-handler = logging.StreamHandler()
-handler.setFormatter(logging.Formatter(config['logging.format']))
-logger.addHandler(handler)
 
 def parse_args(argv=sys.argv):
     parser = argparse.ArgumentParser(prog=PROG_NAME)
@@ -24,7 +21,6 @@ def parse_args(argv=sys.argv):
     return vars(args)
 
 def main():
-    logger.setLevel(config['logging.level'])
     args = parse_args()
 
     try:
