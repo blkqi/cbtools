@@ -11,7 +11,7 @@ logger.addHandler(logging.NullHandler())
 CONFIG_FILE_PATH: str = os.getenv('CONFIG_FILE_PATH', os.getcwd() + '/config.json')
 DEFAULT_CONFIG: Dict[str, Any] = {
     "logging.path": pathlib.Path(CONFIG_FILE_PATH).parent / 'logs',
-    "logging.level": logging.DEBUG,
+    "logging.level": logging.INFO,
     "manager.test_mode": False,
     "manager.library_path": "/library",
     "rename.move_includes": [".anilist.txt", "cover.jpg"],
