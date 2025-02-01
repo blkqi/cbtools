@@ -15,7 +15,7 @@ def configure_logging() -> logging.Logger:
 
     return logger
 
-def enable_file_logging(name: str) -> None:
+def configure_file_logging(name: str) -> None:
     if not config['logging.path'].exists():
         config['logging.path'].mkdir(exist_ok=True)
 
