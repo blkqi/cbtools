@@ -9,6 +9,7 @@ import subprocess
 import zipfile
 import importlib.resources
 
+from io import BytesIO
 from pathlib import Path
 from typing import Any, Dict, Generator, List, Optional, Tuple, Union
 
@@ -21,6 +22,9 @@ class ComicArchive(object):
 
         #TODO handle more type
         assert(self.filepath.suffix == '.cbz')
+
+    def info(self):
+        return ComicInfo.parse(self.read([self._comic_info_name]))
 
     def extract(self, targetdir: Path = Path(''), members: List[str] = []):
         try:
@@ -37,6 +41,23 @@ class ComicArchive(object):
             sys.stderr.write(stdout.decode())
             raise RuntimeError(f'7z error code {process.returncode}')
 
+    def read(self, members: List[str] = []):
+        try:
+            process = subprocess.Popen(['7z', 'x', '-y', '-so', self.filepath] + members,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT
+            )
+        except FileNotFoundError:
+            raise RuntimeError(f'7z not available')
+
+        stdout, _ = process.communicate()
+
+        if process.returncode != 0:
+            sys.stderr.write(stdout.decode())
+            raise RuntimeError(f'7z error code {process.returncode}')
+
+        return BytesIO(stdout)
+
     def add(self, paths: List[Path]):
         try:
             process = subprocess.Popen(['7z', 'a', '-y', self.filepath] + paths,
@@ -51,14 +72,6 @@ class ComicArchive(object):
         if process.returncode != 0:
             sys.stderr.write(stdout.decode())
             raise RuntimeError(f'7z error code {process.returncode}')
-
-    def info(self):
-        with tempfile.TemporaryDirectory() as tempdir:
-            self.extract(tempdir, [self._comic_info_name])
-
-            with open(Path(tempdir) / self._comic_info_name) as f:
-                return ComicInfo.parse(f)
-            #TODO handle missing comic info
 
 class ComicInfo(dict):
     XSD_FILENAME: Path = importlib.resources.files(__name__).joinpath('ComicInfo.xsd')
