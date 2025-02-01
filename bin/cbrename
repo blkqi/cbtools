@@ -6,10 +6,11 @@ import logging
 
 from pathlib import Path
 
+from cbtools import configure_logging
 from cbtools.rename import cbrename
 
 PROG_NAME = 'cbtools'
-logger = logging.getLogger(PROG_NAME)
+configure_logging()
 
 def parse_args(argv=sys.argv):
     parser = argparse.ArgumentParser(prog=PROG_NAME)

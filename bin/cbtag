@@ -5,10 +5,11 @@ import pathlib
 import argparse
 import logging
 
+from cbtools import configure_logging
 from cbtools.tag import AniList, cbtag
 
 PROG_NAME = 'cbtag'
-logger = logging.getLogger(PROG_NAME)
+logging.getLogger(PROG_NAME)
 
 def parse_args(argv=sys.argv):
     parser = argparse.ArgumentParser(prog=PROG_NAME)

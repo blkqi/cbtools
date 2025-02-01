@@ -2,11 +2,12 @@
 
 import logging
 
-from cbtools import enable_file_logging
+from cbtools import configure_logging, enable_file_logging
 from cbtools.config import config
 from cbtools.manager import cbmanager
 
 PROG_NAME = 'cbmanager'
+configure_logging()
 enable_file_logging(PROG_NAME)
 
 if __name__ == "__main__":

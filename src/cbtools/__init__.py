@@ -5,10 +5,15 @@ from logging.handlers import TimedRotatingFileHandler
 from cbtools.config import config
 
 logger = logging.getLogger(__name__)
-handler = logging.StreamHandler()
-handler.setFormatter(logging.Formatter(config['logging.format']))
-logger.addHandler(handler)
-logger.setLevel(config['logging.level'])
+logger.addHandler(logging.NullHandler())
+
+def configure_logging() -> logging.Logger:
+    handler = logging.StreamHandler()
+    handler.setFormatter(logging.Formatter(config['logging.format']))
+    logger.addHandler(handler)
+    logger.setLevel(config['logging.level'])
+
+    return logger
 
 def enable_file_logging(name: str) -> None:
     if not config['logging.path'].exists():
