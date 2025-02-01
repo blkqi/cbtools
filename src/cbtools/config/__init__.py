@@ -1,21 +1,22 @@
 import json
-import os
 import logging
+import os
+import pathlib
 
 from typing import Dict, Any
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
+CONFIG_FILE_PATH: str = os.getenv('CONFIG_FILE_PATH', os.getcwd() + '/config.json')
 DEFAULT_CONFIG: Dict[str, Any] = {
     "test_mode": False,
     "library_path": "/library",
+    "log_path": pathlib.Path(CONFIG_FILE_PATH).parent / 'logs',
     "seriesid_filename": ".anilist.txt",
     "move_includes": [".anilist.txt", "cover.jpg"],
     "rename_pattern": "${Series} (${Year})/${Series} ${Volume}",
 }
-
-CONFIG_FILE_PATH: str = os.getenv('CONFIG_FILE_PATH', os.getcwd() + '/config.json')
 
 def load_config() -> Dict[str, Any]:
     config = DEFAULT_CONFIG
@@ -27,5 +28,9 @@ def load_config() -> Dict[str, Any]:
         logger.warning('Failed to load config, using defaults')
 
     return config
+
+def create_log_dir() -> None:
+    if not config['log_path'].exists():
+        config['log_path'].mkdir(exist_ok=True)
 
 config: Dict[str, Any] = load_config()
