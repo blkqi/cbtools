@@ -77,6 +77,38 @@ def _rename_file(src: Path, dst: Path) -> None:
     shutil.copyfile(src, dst)
     src.unlink()
 
+def _check_has_errors(pairs: Tuple[Path, Path]) -> bool:
+    errors_notfound = set()
+    errors_exists = set()
+    errors_collision = set()
+    checklist_collision = set()
+
+    for src, dst in pairs:
+        if not src.exists():
+            errors_notfound.add(src)
+
+        if dst.exists():
+           errors_exists.add(dst)
+
+        if dst in checklist_collision:
+            errors_collision.add(dst)
+
+        checklist_collision.add(dst)
+
+    if errors_exists or errors_collision or errors_notfound:
+        for path in errors_notfound:
+            logger.error(f'Source {path} doesn\'t exist!')
+
+        for path in errors_exists:
+            logger.error(f'Destination {path} already exists!')
+
+        for path in errors_collision:
+            logger.error(f'More than one file would be renamed to {path}!')
+
+        return True
+
+    return False
+
 _root_missing = Path('')
 _validate_missing = False
 _dryrun_missing = False
@@ -91,10 +123,8 @@ def cbrename(
     paths = expand_paths(files)
     pairs = set(_construct_rename_pairs(paths, root=root))
 
-    for src, _ in pairs:
-        if not src.exists():
-            raise FileNotFoundError(f'file "{src}" does not exist!')
-        # TODO detect or prevent collisions and overwrites
+    if _check_has_errors(pairs) and not dryrun:
+        return
 
     parents = set((src.parent, dst.parent) for src, dst in pairs if src.parent != dst.parent)
     extra = set(_construct_rename_extra(parents))
