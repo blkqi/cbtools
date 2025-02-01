@@ -32,33 +32,29 @@ def _formatters() -> Tuple[Tuple[str, callable], ...]:
 
 _default_missing = ''
 
-def _path_from_cinfo(cinfo: Dict[str, Any], pattern: str, default: str = _default_missing) -> Path:
+def _path_from_cinfo(cinfo: Dict[str, Any], default: str = _default_missing) -> Path:
     # prefer localized series to series
     cinfo['Series'] = cinfo.get('LocalizedSeries') or cinfo.get('Series')
 
-    template = string.Template(pattern)
+    template = string.Template(config['rename.pattern'])
     defaults = {key: default for key in template.get_identifiers()}
     values = {k: _sanitize_paths(f(cinfo[k])) for k, f in _formatters() if k in cinfo}
     strpath = template.substitute(defaults, **values)
 
     return Path(strpath.strip() + '.cbz')
 
-_pattern_missing = config['rename.pattern']
-
-def _construct_rename_pairs(paths: List[Path], *, root: Path, pattern: str = _pattern_missing) -> Generator[Tuple[Path, Path], None, None]:
+def _construct_rename_pairs(paths: List[Path], *, root: Path) -> Generator[Tuple[Path, Path], None, None]:
     for src in paths:
         with CBZFile(src) as cfile:
             if cfile.info:
-                dst = root / _path_from_cinfo(cfile.info, pattern=pattern)
+                dst = root / _path_from_cinfo(cfile.info)
                 if src != dst:
                     yield src, dst
             else:
                 logger.warning(f'file "{src}" contains no info xml - skipping rename')
 
-_includes_missing = config['rename.move_includes']
-
-def _construct_rename_extra(parents: List[Tuple[Path, Path]], includes: List[str] = _includes_missing) -> Generator[Tuple[Path, Path], None, None]:
-    for inc in includes:
+def _construct_rename_extra(parents: List[Tuple[Path, Path]]) -> Generator[Tuple[Path, Path], None, None]:
+    for inc in config['rename.move_includes']:
         for src, dst in parents:
             if (src / inc).exists():
                 yield (src / inc, dst / inc)
@@ -112,17 +108,7 @@ def _check_has_errors(pairs: Tuple[Path, Path]) -> bool:
 
     return False
 
-_root_missing = Path('')
-_validate_missing = False
-_dryrun_missing = False
-
-def cbrename(
-    files: List[Path],
-    root: Path = _root_missing,
-    validate: bool = _validate_missing,
-    dryrun: bool = _dryrun_missing
-) -> None:
-
+def rename(files: List[Path], root: Path = Path(''), dryrun: bool = False) -> None:
     paths = expand_paths(files)
     pairs = set(_construct_rename_pairs(paths, root=root))
 

@@ -14,7 +14,7 @@ from cbtools.core import CBZFile, expand_paths
 from cbtools.manager.api import app
 from cbtools.manager.queue import manager_queue
 from cbtools.tag import AniList, cbtag
-from cbtools.rename import cbrename
+from cbtools.rename import rename
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
@@ -64,7 +64,7 @@ async def worker() -> None:
                 processing_items.remove(path)
                 continue
 
-            cbrename([path], dryrun=config['manager.test_mode'], root=config['manager.library_path'])
+            rename([path], dryrun=config['manager.test_mode'], root=config['manager.library_path'])
 
             processing_items.remove(path)
             end = time.time()
