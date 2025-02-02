@@ -4,4 +4,4 @@ from typing import Dict, Any
 
 def extension(cinfo: Dict[str, Any], data: Dict[str, Any]) -> None:
     if data['volumes'] == 1 and data['status'] == 'FINISHED':
-        cinfo['Tags'] = 'Oneshot'
+        cinfo['Tags'] = ','.join([cinfo['Tags'], 'Oneshot'])
