@@ -13,5 +13,6 @@ setup(name='cbtools',
       package_data={'cbtools': ['*.xsd'], 'cbtools.tag': ['*.gql']},
       packages=packages,
       scripts=['bin/cbinfo', 'bin/cbrename', 'bin/cbtag', 'bin/cbscale', 'bin/cbmanager'],
-      install_requires=['lxml', 'jmespath', 'requests', 'dictdiffer', 'waitress', 'flask', 'watchdog'],
+      install_requires=['lxml', 'jmespath', 'requests', 'dictdiffer', 'waitress', 'flask', 'watchdog',
+                        'kindlecomicconverter @ git+https://github.com/ciromattia/kcc.git'],
       license_files=['LICENSE'],)
