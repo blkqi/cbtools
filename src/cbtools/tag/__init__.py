@@ -109,9 +109,12 @@ class AniListResponse(dict):
         return cinfo
 
     def _apply_extensions(self, cinfo: ComicInfo) -> None:
-        for extension in extensions.__all__:
-            module = importlib.import_module(f'cbtools.tag.extensions.{extension}')
-            module.extension(cinfo, self.media)
+        for extension in config['tag.extensions']:
+            try:
+                module = importlib.import_module(f'cbtools.tag.extensions.{extension}')
+                module.extension(cinfo, self.media)
+            except ImportError:
+                logger.error(f'Failed to import extension {extension}')
 
 def _get_series_id(path: 'Path') -> Optional[int]:
     if path.is_file():

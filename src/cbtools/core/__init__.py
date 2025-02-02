@@ -95,7 +95,8 @@ class CBZFile(zipfile.ZipFile):
             if match := re.search(r'(\d+)', part):
                 return match.group(1)
 
-        return None
+        # TODO: raise error
+        return 0
 
 def expand_paths(paths: List[pathlib.Path]) -> Generator[pathlib.Path, None, None]:
     for path in paths:

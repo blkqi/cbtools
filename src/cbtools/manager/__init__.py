@@ -26,7 +26,6 @@ class LibraryHandler(FileSystemEventHandler):
         path = pathlib.Path(event.src_path)
 
         if path.parent in processing_items:
-            logger.debug(f'Skipping {path.name} as the folder is currently processing')
             return
 
         if path.suffix.lower() == '.cbz':
