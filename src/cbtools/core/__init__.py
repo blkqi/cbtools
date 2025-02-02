@@ -13,51 +13,6 @@ from io import BytesIO
 from pathlib import Path
 from typing import Any, Dict, Generator, List, Optional, Tuple, Union
 
-class ComicArchive(object):
-    _comic_info_name = 'ComicInfo.xml'
-
-    def __init__(self, filepath: Path):
-        self.filepath = filepath
-
-        #TODO handle more type
-        assert(self.filepath.suffix == '.cbz')
-
-    def info(self):
-        data = self.read([self._comic_info_name])
-        if data.getbuffer().nbytes:
-            return ComicInfo.parse(data)
-        else:
-            return ComicInfo()
-
-    def extract(self, targetdir: Path = Path(''), members: List[str] = []):
-        process = subprocess.run(['7z', 'x', '-y', '-o' + targetdir, self.filepath] + members,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT
-        )
-
-        if process.returncode != 0:
-            raise RuntimeError(f'7z error code {process.returncode}')
-
-    def read(self, members: List[str] = []):
-        process = subprocess.run(['7z', 'x', '-y', '-so', self.filepath] + members,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT
-        )
-
-        if process.returncode != 0:
-            raise RuntimeError(f'7z error code {process.returncode}')
-
-        return BytesIO(process.stdout)
-
-    def add(self, paths: List[Path]):
-        process = subprocess.run(['7z', 'a', '-y', self.filepath] + paths,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT
-        )
-
-        if process.returncode != 0:
-            raise RuntimeError(f'7z error code {process.returncode}')
-
 class ComicInfo(dict):
     XSD_FILENAME: Path = importlib.resources.files(__name__).joinpath('ComicInfo.xsd')
     XML_FILENAME: str = 'ComicInfo.xml'
@@ -86,6 +41,60 @@ class ComicInfo(dict):
             {k: v for k, v in self.items() if k not in excluding},
             {k: v for k, v in with_data.items() if k not in excluding})
         return list(result)
+
+class ComicArchive(object):
+    def __init__(self, filepath: Path) -> None:
+        self.filepath = filepath
+        self.volume = None #TODO
+
+        #TODO handle more type
+        assert(self.filepath.suffix == '.cbz')
+
+    def info(self) -> ComicInfo:
+        data = self.read([ComicInfo.XML_FILENAME])
+        if data.getbuffer().nbytes:
+            return ComicInfo.parse(data)
+        else:
+            return ComicInfo()
+
+    def extract(self, targetdir: Path = Path(''), members: List[str] = []) -> None:
+        process = subprocess.run(['7z', 'x', self.filepath, *members, '-y', f'-o{targetdir}'],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT
+        )
+
+        if process.returncode != 0:
+            raise RuntimeError(f'7z error code {process.returncode}')
+
+    def add(self, paths: List[Path]) -> None:
+        process = subprocess.run(['7z', 'a', self.filepath, *paths, '-y'],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT
+        )
+
+        if process.returncode != 0:
+            raise RuntimeError(f'7z error code {process.returncode}')
+
+    def read(self, members: List[str] = []) -> BytesIO:
+        process = subprocess.run(['7z', 'x', self.filepath, *members, '-y', '-so'],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT
+        )
+
+        if process.returncode != 0:
+            raise RuntimeError(f'7z error code {process.returncode}')
+
+        return BytesIO(process.stdout)
+
+    def write(self, member: str, data: bytes) -> None:
+        process = subprocess.run(['7z', 'a', self.filepath, '-y', f'-si{member}'],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            input=data
+        )
+
+        if process.returncode != 0:
+            raise RuntimeError(f'7z error code {process.returncode}\n')
 
 class CBZFile(zipfile.ZipFile):
     def __init__(self, file: Union[str, bytes], **kwds: Any) -> None:
