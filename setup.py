@@ -14,5 +14,5 @@ setup(name='cbtools',
       packages=packages,
       scripts=['bin/cbinfo', 'bin/cbrename', 'bin/cbtag', 'bin/cbscale', 'bin/cbmanager'],
       install_requires=['lxml', 'jmespath', 'requests', 'dictdiffer', 'waitress', 'flask', 'watchdog',
-                        'kindlecomicconverter @ git+https://github.com/ciromattia/kcc.git'],
+                        'kindlecomicconverter @ git+https://github.com/ciromattia/kcc.git', 'packaging'],
       license_files=['LICENSE'],)
