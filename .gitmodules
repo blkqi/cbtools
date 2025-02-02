@@ -1,3 +1,0 @@
-[submodule "lib/kcc"]
-	path = lib/kcc
-	url = https://github.com/ciromattia/kcc.git
