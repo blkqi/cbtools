@@ -3,6 +3,8 @@ import shutil
 import string
 import logging
 
+from functools import reduce
+from itertools import chain, groupby
 from pathlib import Path
 from operator import itemgetter
 from collections import Counter
@@ -77,22 +79,29 @@ def _rename_file(src: Path, dst: Path) -> None:
     shutil.copyfile(src, dst)
     src.unlink()
 
+def _unique(iterable):
+    return map(itemgetter(0), groupby(iterable))
+
+def _unique_count(iterable):
+    return ((x, sum(1 for _ in g)) for x, g in groupby(iterable))
+
+def _not_unique(iterable):
+    return (x for x, n in _unique_count(iterable) if n > 1)
+
 def _check_has_errors(pairs: Tuple[Path, Path]) -> bool:
-    errors = False
+    log_noexist = lambda src: logger.error(f'Source {src} doesn\'t exist!') or src
+    log_replace = lambda dst: logger.error(f'Destination {dst} already exists!') or dst
+    log_collide = lambda dst: logger.error(f'More than one file would be renamed to {dst}!') or dst
 
-    for path in (src for src, _ in pairs if not src.exists()):
-        logger.error(f'Source {path} doesn\'t exist!')
-        errors |= True
+    gen_noexist = _unique(sorted(src for src, _ in pairs if not src.exists()))
+    gen_replace = _unique(sorted(dst for _, dst in pairs if dst.exists()))
+    gen_collide = _not_unique(sorted(dst for _, dst in pairs))
 
-    for path in (dst for _, dst in pairs if dst.exists()):
-        logger.error(f'Destination {path} already exists!')
-        errors |= True
+    all_errors = chain(map(log_noexist, gen_noexist),
+                       map(log_replace, gen_replace),
+                       map(log_collide, gen_collide))
 
-    for path in (key for key, val in Counter(dst for _, dst in pairs).items() if val > 1):
-        logger.error(f'More than one file would be renamed to {path}!')
-        errors |= True
-
-    return errors
+    return any(list(all_errors))
 
 def rename(files: List[Path], root: Path = Path(''), dryrun: bool = False) -> None:
     paths = expand_paths(files)
