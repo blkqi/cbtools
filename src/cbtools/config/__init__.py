@@ -19,6 +19,7 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     "rename.pattern": "${Series} (${Year})/${Series} ${Volume}",
     "tag.series_id_filename": ".anilist.txt",
     "tag.write_series_id_file": False,
+    "tag.extensions": [],
 }
 
 def load_config() -> Dict[str, Any]:
