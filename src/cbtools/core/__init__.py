@@ -43,7 +43,10 @@ class CBZFile(zipfile.ZipFile):
     def __init__(self, file: Union[str, bytes], **kwds: Any) -> None:
         super(CBZFile, self).__init__(file, **kwds)
         self.info: ComicInfo = self._get_info()
-        self.volume: Optional[str] = str(float(self._parse_volume())).removesuffix('.0')
+        try:
+            self.volume: Optional[str] = str(float(self._parse_volume())).removesuffix('.0')
+        except TypeError:
+            self.volume = ''
 
     def Path(self) -> pathlib.Path:
         return pathlib.Path(self.filename)
