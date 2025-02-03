@@ -23,9 +23,12 @@ processing_items: Set[pathlib.Path] = set()
 
 class LibraryHandler(FileSystemEventHandler):
     def on_created(self, event: FileSystemEvent) -> None:
+        if event.is_directory:
+            return
+
         path = pathlib.Path(event.src_path)
 
-        if path.parent in processing_items:
+        if path.parent in processing_items or path.parent.resolve() == pathlib.Path(config['manager.library_path']):
             return
 
         if path.suffix.lower() == '.cbz':
@@ -33,9 +36,15 @@ class LibraryHandler(FileSystemEventHandler):
             manager_queue.enqueue(path.parent)
 
     def on_modified(self, event: FileSystemEvent) -> None:
+        if event.is_directory:
+            return
+
         path = pathlib.Path(event.src_path)
 
-        if path.name == config['tag.series_id_filename'] and path.parent not in processing_items:
+        if path.parent in processing_items or path.parent.resolve() == pathlib.Path(config['manager.library_path']):
+            return
+
+        if path.name == config['tag.series_id_filename']:
             logger.debug(f"{config['tag.series_id_filename']} update in {path.parent}")
             manager_queue.enqueue(path.parent)
 
