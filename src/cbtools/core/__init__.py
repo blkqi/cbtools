@@ -76,9 +76,9 @@ class ComicArchive(object):
             raise RuntimeError(f'unsupported file type "{ext}"')
 
     def info(self) -> ComicInfo:
-        data = self.read([ComicInfo.XML_FILENAME])
-        if data.getbuffer().nbytes:
-            return ComicInfo.parse(data)
+        buffer = self.read(ComicInfo.XML_FILENAME)
+        if buffer.nbytes:
+            return ComicInfo.parse(BytesIO(buffer))
         else:
             return ComicInfo()
 
@@ -112,8 +112,8 @@ class ComicArchive(object):
         if process.returncode != 0:
             raise RuntimeError(f'7z error code {process.returncode}')
 
-    def read(self, members: List[str] = []) -> BytesIO:
-        process = subprocess.run(['7z', 'x', self.filepath, *members, *self._args, '-so'],
+    def read(self, member: str) -> BytesIO:
+        process = subprocess.run(['7z', 'x', self.filepath, member, *self._args, '-so'],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT
         )
@@ -122,7 +122,7 @@ class ComicArchive(object):
             sys.stderr.buffer.write(process.stdout)
             raise RuntimeError(f'7z error code {process.returncode}')
 
-        return BytesIO(process.stdout)
+        return process.stdout
 
     def write(self, member: str, data: bytes) -> None:
         process = subprocess.run(['7z', 'a', self.filepath, *self._args, f'-si{member}'],

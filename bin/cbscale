@@ -6,6 +6,7 @@ import shutil
 import pathlib
 import argparse
 import tempfile
+import itertools
 import subprocess
 import logging
 
@@ -24,12 +25,16 @@ def _write_output(outpath, srcpath, dstpath):
 
     cfile = ComicArchive(outpath)
 
-    path = srcpath / ComicInfo.XML_FILENAME
-    if path.exists():
-        cfile.add([path])
+    add_paths = sorted(dstpath.iterdir())
+    info_path = srcpath / ComicInfo.XML_FILENAME
 
-    for path in sorted(dstpath.iterdir()):
-        cfile.add([path])
+    if info_path.exists():
+        add_paths = itertools.chain([info_path], add_paths)
+
+    for path in add_paths:
+        with open(path, 'rb') as f:
+            buffer = f.read()
+            cfile.write(path.name, buffer)
 
     logger.info(f'Created archive "{outpath}"')
 
@@ -41,11 +46,12 @@ def _extract_flatten(cfile, root):
             continue
 
         path = root / member.name.replace('/', '__')
+
         with open(path, 'wb') as f:
-            buffer = cfile.read([member.name]).getbuffer()
+            buffer = cfile.read(member.name)
             f.write(buffer)
 
-def _upscale_dir(srcpath, dstpath, scale, noise, ftype, gpuid,
+def _upscale_images(srcpath, dstpath, scale, noise, ftype, gpuid,
                  entrypoint=WAIFU2X_BIN, model=WAIFU2X_MODEL):
     logger.info(f'Upscaling image data')
 
@@ -88,7 +94,7 @@ def upscale(cfile, path, **kwds):
             raise RuntimeError('path "{output}" already exists!')
 
         _extract_flatten(cfile, srcpath)
-        _upscale_dir(srcpath, dstpath, **kwds)
+        _upscale_images(srcpath, dstpath, **kwds)
         _write_output(outpath, srcpath, dstpath)
 
 def cbscale(files, **kwds):
