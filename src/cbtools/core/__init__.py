@@ -139,64 +139,6 @@ class ComicArchive(object):
         data = (x.decode().strip() for x in (*self._member_struct.unpack_from(info), name))
         return ComicArchiveMember(*data)
 
-class CBZFile(zipfile.ZipFile):
-    def __init__(self, file: Union[str, bytes], **kwds: Any) -> None:
-        super(CBZFile, self).__init__(file, **kwds)
-        self.info: ComicInfo = self._get_info()
-        self.volume: Optional[str] = str(float(self._parse_volume())).removesuffix('.0')
-
-    def Path(self) -> Path:
-        return Path(self.filename)
-
-    def extractall(self, path: Optional[Union[str, bytes]] = None, members: Optional[List[zipfile.ZipInfo]] = None, pwd: Optional[bytes] = None, flatten: bool = False) -> None:
-        if not flatten:
-            return super().extractall(path=path, members=members, pwd=pwd)
-
-        for member in self.infolist():
-            if member.is_dir():
-                continue
-
-            member.filename = member.filename.replace('/', '__')
-            self.extract(member, path)
-
-    def update_cinfo(self, cinfo: ComicInfo) -> None:
-        with tempfile.TemporaryDirectory() as tempdir:
-            temppath = Path(tempdir) / 'cbz'
-
-            with CBZFile(temppath, mode='w') as cbzwrite:
-                cbzwrite.writestr(ComicInfo.XML_FILENAME, cinfo.encode())
-
-                for item in self.infolist():
-                    if item.filename != ComicInfo.XML_FILENAME:
-                        data = self.read(item.filename)
-                        cbzwrite.writestr(item, data)
-
-            shutil.copyfile(temppath, self.filename)
-            temppath.unlink()
-
-    def _get_info(self) -> ComicInfo:
-        try:
-            with self.open(ComicInfo.XML_FILENAME) as c:
-                return ComicInfo.parse(c)
-        except KeyError:
-            pass
-
-        return ComicInfo()
-
-    def _parse_volume(self) -> Optional[str]:
-        filename_parts = Path(self.filename).stem.split(' ')
-        filename_parts.reverse()
-
-        for part in filename_parts:
-            if match := re.search(r'[vV](\d+\.?\d*)', part):
-                return match.group(1)
-
-        for part in filename_parts:
-            if match := re.search(r'(\d+)', part):
-                return match.group(1)
-
-        return None
-
 def expand_paths(paths: List[Path]) -> Generator[Path, None, None]:
     for path in paths:
         if '*' in path.name:

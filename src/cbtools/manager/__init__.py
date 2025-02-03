@@ -10,7 +10,7 @@ from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler, FileSystemEvent
 
 from cbtools.config import config
-from cbtools.core import CBZFile, expand_paths
+from cbtools.core import expand_paths
 from cbtools.manager.api import app
 from cbtools.manager.queue import manager_queue
 from cbtools.tag import AniList, cbtag
