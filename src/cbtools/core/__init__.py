@@ -77,7 +77,7 @@ class ComicArchive(object):
 
     def info(self) -> ComicInfo:
         buffer = self.read(ComicInfo.XML_FILENAME)
-        if buffer.nbytes:
+        if buffer:
             return ComicInfo.parse(BytesIO(buffer))
         else:
             return ComicInfo()
