@@ -10,7 +10,7 @@ logger.addHandler(logging.NullHandler())
 
 CONFIG_FILE_PATH: str = os.getenv('CONFIG_FILE_PATH', os.getcwd() + '/config.json')
 DEFAULT_CONFIG: Dict[str, Any] = {
-    "logging.path": pathlib.Path(CONFIG_FILE_PATH).parent / 'logs',
+    "logging.path": str(pathlib.Path(CONFIG_FILE_PATH).parent / 'logs'),
     "logging.level": logging.INFO,
     "logging.format": '%(asctime)s [%(levelname)8s] %(message)s (%(name)s :: %(filename)s:%(lineno)s)',
     "manager.test_mode": False,
