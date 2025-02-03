@@ -63,8 +63,7 @@ class ComicArchive(object):
 
     def __init__(self, filepath: Path) -> None:
         self.filepath = filepath
-        self.volume = None
-
+        self.volume: Optional[str] = str(float(self._parse_volume())).removesuffix('.0')
         self._ftype = self._file_type()
         self._args = ['-y', f'-t{self._ftype}']
 
@@ -74,6 +73,21 @@ class ComicArchive(object):
             return next(y for x, y in self._supported_file_types.items() if ext in (x, y))
         except StopIteration:
             raise RuntimeError(f'unsupported file type "{ext}"')
+
+    def _parse_volume(self) -> Optional[str]:
+        filename_parts = self.filepath.stem.split(' ')
+        filename_parts.reverse()
+
+        for part in filename_parts:
+            if match := re.search(r'[vV](\d+\.?\d*)', part):
+                return match.group(1)
+
+        for part in filename_parts:
+            if match := re.search(r'(\d+)', part):
+                return match.group(1)
+
+        # TODO: raise error
+        return 0
 
     def info(self) -> ComicInfo:
         buffer = self.read(ComicInfo.XML_FILENAME)
