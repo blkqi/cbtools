@@ -12,6 +12,7 @@ def convert(path, **kwds):
     opts = SimpleNamespace(
         input = [],
         format = 'CBZ',
+        profile = 'KS', # Kindle Scribe
         title = 'defaulttitle',
         author = 'defaultauthor',
         delete = False,
@@ -26,8 +27,10 @@ def convert(path, **kwds):
         forcepng = False,
         forcecolor = False,
         mozjpeg = False,
-        gamma = 0.0,
-        cropping = 0,
+        upscale = True, # Resize images to device's resolution
+        gamma = 0.0, # Automatic gamma correction
+        splitter = 2, # Rotate spreads
+        cropping = 0, # Disable cropping
         batchsplit = 0,
         customwidth = 0,
         customheight = 0,
