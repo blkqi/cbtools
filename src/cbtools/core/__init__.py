@@ -7,10 +7,12 @@ import shutil
 import tempfile
 import subprocess
 import zipfile
+import struct
 import importlib.resources
 
 from io import BytesIO
 from pathlib import Path
+from operator import itemgetter
 from typing import Any, Dict, Generator, List, Optional, Tuple, Union
 
 class ComicInfo(dict):
@@ -42,13 +44,36 @@ class ComicInfo(dict):
             {k: v for k, v in with_data.items() if k not in excluding})
         return list(result)
 
+class ComicArchiveMember(object):
+    def __init__(self, mtime, attr, size, compressed, name):
+        self.name = name
+        self.attr = attr
+
+    def is_dir(self):
+        return self.attr.startswith('D')
+
 class ComicArchive(object):
+    _member_struct = struct.Struct('20s 6s 13s 13s')
+    _member_name_offset = 52
+    _supported_file_types = {
+        'cbz': 'zip',
+        'cbr': 'rar',
+        'cb7': '7z',
+    }
+
     def __init__(self, filepath: Path) -> None:
         self.filepath = filepath
-        self.volume = None #TODO
+        self.volume = None
 
-        #TODO handle more type
-        assert(self.filepath.suffix == '.cbz')
+        self._ftype = self._file_type()
+        self._args = ['-y', f'-t{self._ftype}']
+
+    def _file_type(self):
+        ext = self.filepath.suffix.strip('.')
+        try:
+            return next(y for x, y in self._supported_file_types.items() if ext in (x, y))
+        except StopIteration:
+            raise RuntimeError(f'unsupported file type "{ext}"')
 
     def info(self) -> ComicInfo:
         data = self.read([ComicInfo.XML_FILENAME])
@@ -57,8 +82,20 @@ class ComicArchive(object):
         else:
             return ComicInfo()
 
+    def list(self):
+        process = subprocess.run(['7z', 'l', self.filepath, '-ba'],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT
+        )
+
+        if process.returncode != 0:
+            raise RuntimeError(f'7z error code {process.returncode}')
+
+        for line in BytesIO(process.stdout):
+            yield self._parse_member(line)
+
     def extract(self, targetdir: Path = Path(''), members: List[str] = []) -> None:
-        process = subprocess.run(['7z', 'x', self.filepath, *members, '-y', f'-o{targetdir}'],
+        process = subprocess.run(['7z', 'x', self.filepath, *members, *self._args, f'-o{targetdir}'],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT
         )
@@ -67,7 +104,7 @@ class ComicArchive(object):
             raise RuntimeError(f'7z error code {process.returncode}')
 
     def add(self, paths: List[Path]) -> None:
-        process = subprocess.run(['7z', 'a', self.filepath, *paths, '-y'],
+        process = subprocess.run(['7z', 'a', self.filepath, *paths, *self._args],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT
         )
@@ -76,18 +113,19 @@ class ComicArchive(object):
             raise RuntimeError(f'7z error code {process.returncode}')
 
     def read(self, members: List[str] = []) -> BytesIO:
-        process = subprocess.run(['7z', 'x', self.filepath, *members, '-y', '-so'],
+        process = subprocess.run(['7z', 'x', self.filepath, *members, *self._args, '-so'],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT
         )
 
         if process.returncode != 0:
+            sys.stderr.buffer.write(process.stdout)
             raise RuntimeError(f'7z error code {process.returncode}')
 
         return BytesIO(process.stdout)
 
     def write(self, member: str, data: bytes) -> None:
-        process = subprocess.run(['7z', 'a', self.filepath, '-y', f'-si{member}'],
+        process = subprocess.run(['7z', 'a', self.filepath, *self._args, f'-si{member}'],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             input=data
@@ -95,6 +133,11 @@ class ComicArchive(object):
 
         if process.returncode != 0:
             raise RuntimeError(f'7z error code {process.returncode}\n')
+
+    def _parse_member(self, line):
+        info, name = (line[:self._member_name_offset], line[self._member_name_offset:])
+        data = (x.decode().strip() for x in (*self._member_struct.unpack_from(info), name))
+        return ComicArchiveMember(*data)
 
 class CBZFile(zipfile.ZipFile):
     def __init__(self, file: Union[str, bytes], **kwds: Any) -> None:

@@ -10,7 +10,7 @@ import subprocess
 import logging
 
 from cbtools import configure_logging
-from cbtools.core import CBZFile, ComicInfo, expand_paths
+from cbtools.core import ComicArchive, ComicInfo, expand_paths
 
 PROG_NAME = 'cbscale'
 logger = configure_logging()
@@ -19,68 +19,84 @@ WAIFU2X_BIN = os.getenv('WAIFU2X_BIN', '/usr/bin/waifu2x-ncnn-vulkan')
 WAIFU2X_MODEL = os.getenv('WAIFU2X_MODEL', '/usr/share/waifu2x-ncnn-vulkan/models-upconv_7_anime_style_art_rgb')
 OUTFILE_SUFFIX = 'cbscale'
 
-def upscale(cfile, path, scale, noise, ftype, gpuid,
-            entrypoint=WAIFU2X_BIN, model=WAIFU2X_MODEL):
+def _write_output(outpath, srcpath, dstpath):
+    logger.info(f'Packing archive "{outpath}"')
 
+    cfile = ComicArchive(outpath)
+
+    path = srcpath / ComicInfo.XML_FILENAME
+    if path.exists():
+        cfile.add([path])
+
+    for path in sorted(dstpath.iterdir()):
+        cfile.add([path])
+
+    logger.info(f'Created archive "{outpath}"')
+
+def _extract_flatten(cfile, root):
+    logger.info(f'Unpacking archive "{cfile.filepath}"')
+
+    for member in cfile.list():
+        if member.is_dir():
+            continue
+
+        path = root / member.name.replace('/', '__')
+        with open(path, 'wb') as f:
+            buffer = cfile.read([member.name]).getbuffer()
+            f.write(buffer)
+
+def _upscale_dir(srcpath, dstpath, scale, noise, ftype, gpuid,
+                 entrypoint=WAIFU2X_BIN, model=WAIFU2X_MODEL):
+    logger.info(f'Upscaling image data')
+
+    try:
+        process = subprocess.Popen(
+            [
+                entrypoint,
+                '-i', srcpath,
+                '-o', dstpath,
+                '-s', str(scale),
+                '-n', str(noise),
+                '-f', ftype,
+                '-g', gpuid,
+                '-m', model,
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT
+        )
+    except FileNotFoundError:
+        raise RuntimeError(f'waifu2x-ncnn-vulkan not found at {entrypoint}')
+
+    stdout, _ = process.communicate()
+
+    if process.returncode != 0:
+        sys.stderr.write(stdout.decode())
+        raise RuntimeError(f'waifu2x-ncnn-vulkan error code {process.returncode}')
+
+def upscale(cfile, path, **kwds):
     with tempfile.TemporaryDirectory() as srcdir, \
             tempfile.TemporaryDirectory() as dstdir:
-
-        inpath = pathlib.Path(cfile.filename)
-        logger.info(f'Unpacking archive "{inpath}"')
-
-        cfile.extractall(path=srcdir, flatten=True)
-
-        logger.info(f'Upscaling image data')
-
-        try:
-            process = subprocess.Popen(
-                [
-                    entrypoint,
-                    '-i', srcdir,
-                    '-o', dstdir,
-                    '-s', str(scale),
-                    '-n', str(noise),
-                    '-f', ftype,
-                    '-g', gpuid,
-                    '-m', model,
-                ],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT
-            )
-        except FileNotFoundError:
-            raise RuntimeError(f'waifu2x-ncnn-vulkan not found at {entrypoint}')
-
-        stdout, _ = process.communicate()
-
-        if process.returncode != 0:
-            sys.stderr.write(stdout.decode())
-            raise RuntimeError(f'waifu2x-ncnn-vulkan error code {process.returncode}')
 
         srcpath = pathlib.Path(srcdir)
         dstpath = pathlib.Path(dstdir)
 
-        stem = '_'.join((inpath.stem, OUTFILE_SUFFIX))
-        path = path or inpath.parent
+        stem = '_'.join((cfile.filepath.stem, OUTFILE_SUFFIX))
+        path = path or cfile.filepath.parent
         outpath = (path / stem).with_suffix('.cbz')
 
-        logger.info(f'Packing archive "{outpath}"')
+        if outpath.exists():
+            raise RuntimeError('path "{output}" already exists!')
 
-        with CBZFile(outpath, mode='w') as cfile:
-            path = srcpath / ComicInfo.XML_FILENAME
-            if path.exists():
-                cfile.write(path, arcname=path.name)
-
-            for path in sorted(dstpath.iterdir()):
-                cfile.write(path, arcname=path.name)
-
-        logger.info(f'Created archive "{outpath}"')
+        _extract_flatten(cfile, srcpath)
+        _upscale_dir(srcpath, dstpath, **kwds)
+        _write_output(outpath, srcpath, dstpath)
 
 def cbscale(files, **kwds):
     files = expand_paths(files)
 
     for path in files:
-        with CBZFile(path) as cfile:
-            upscale(cfile, **kwds)
+        cfile = ComicArchive(path)
+        upscale(cfile, **kwds)
 
 def parse_args(argv=sys.argv):
     parser = argparse.ArgumentParser(prog=PROG_NAME)
