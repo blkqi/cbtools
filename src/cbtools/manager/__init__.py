@@ -35,11 +35,7 @@ class LibraryHandler(FileSystemEventHandler):
     def on_modified(self, event: FileSystemEvent) -> None:
         path = pathlib.Path(event.src_path)
 
-        if path.parent in processing_items:
-            logger.debug(f'Skipping {path.name} as the folder is currently processing')
-            return
-
-        if path.name == config['tag.series_id_filename']:
+        if path.name == config['tag.series_id_filename'] and path.parent not in processing_items:
             logger.debug(f"{config['tag.series_id_filename']} update in {path.parent}")
             manager_queue.enqueue(path.parent)
 

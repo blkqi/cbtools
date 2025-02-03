@@ -36,7 +36,7 @@ def _formatters() -> Tuple[Tuple[str, callable], ...]:
 _default_missing = ''
 
 def _path_from_cinfo(cinfo: Dict[str, Any], default: str = _default_missing) -> Path:
-    # prefer localized series to series
+    # prefer localized series to series, if it exists
     cinfo['Series'] = cinfo.get('LocalizedSeries') or cinfo.get('Series')
 
     template = string.Template(config['rename.pattern'])
