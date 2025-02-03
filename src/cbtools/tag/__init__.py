@@ -62,7 +62,6 @@ class AniList:
 class AniListResponse(dict):
     ANILIST_COMICINFO_JMESMAP: Dict[str, str] = {
         'Series': 'title.romaji',
-        'LocalizedSeries': 'title.english',
         'Count': 'volumes',
         'Writer': 'staff.edges[?role.contains(@, `Story`)].node.name.full | [0]',
         'Penciller': 'staff.edges[?role.contains(@, `Art`)].node.name.full | [0]',
