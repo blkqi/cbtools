@@ -33,8 +33,7 @@ def _write_output(outpath, srcpath, dstpath):
 
     for path in add_paths:
         with open(path, 'rb') as f:
-            buffer = f.read()
-            cfile.write(path.name, buffer)
+            cfile.add(path.name, f)
 
     logger.info(f'Created archive "{outpath}"')
 

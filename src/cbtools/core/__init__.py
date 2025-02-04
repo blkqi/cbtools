@@ -44,13 +44,15 @@ class ComicInfo(dict):
             {k: v for k, v in with_data.items() if k not in excluding})
         return list(result)
 
+
 class ComicArchiveMember(object):
-    def __init__(self, mtime, attr, size, compressed, name):
+    def __init__(self, name, mtime, attr, size, compressed):
         self.name = name
         self.attr = attr
 
     def is_dir(self):
         return self.attr.startswith('D')
+
 
 class ComicArchive(object):
     _member_struct = struct.Struct('20s 6s 13s 13s')
@@ -103,27 +105,34 @@ class ComicArchive(object):
         )
 
         buffer = BytesIO(process.stdout)
-        yield from map(self._parse_member, iter(buffer)):
+        yield from map(self._parse_member, iter(buffer))
 
-    def read(self, member: str) -> bytes:
-        process = _subprocess_run(['7z', 'x', self.filepath, member, *self._args, '-so'],
+    def read(self, arcname: str) -> bytes:
+        process = _subprocess_run(['7z', 'x', self.filepath, arcname, *self._args, '-so'],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT
         )
 
         return process.stdout
 
-    def write(self, member: str, data: bytes) -> None:
-        process = _subprocess_run(['7z', 'a', self.filepath, *self._args, f'-si{member}'],
+    def write(self, arcname: str, data: bytes) -> None:
+        process = _subprocess_run(['7z', 'a', self.filepath, *self._args, f'-si{arcname}'],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             input=data
         )
 
+    def add(self, arcname: str, f) -> None:
+        process = _subprocess_run(['7z', 'a', self.filepath, *self._args, f'-si{arcname}'],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            stdin=f,
+        )
+
     def _parse_member(self, line):
         info, name = (line[:self._member_name_offset], line[self._member_name_offset:])
-        data = (x.decode().strip() for x in (*self._member_struct.unpack_from(info), name))
-        return ComicArchiveMember(*data)
+        args = (x.decode().strip() for x in (name, *self._member_struct.unpack_from(info)))
+        return ComicArchiveMember(*args)
 
 
 def _subprocess_run(cmd = List[str], **kwds):
