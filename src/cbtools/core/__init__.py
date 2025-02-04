@@ -13,7 +13,7 @@ import importlib.resources
 from io import BytesIO
 from pathlib import Path
 from operator import itemgetter
-from typing import Any, Dict, Generator, List, Optional, Tuple, Union
+from typing import Any, Dict, Generator, List, Optional, Tuple, Union, BinaryIO
 
 
 class ComicInfo(dict):
@@ -104,39 +104,30 @@ class ComicArchive(object):
             return ComicInfo()
 
     def list(self) -> Generator[ComicArchiveMember, None, None]:
-        process = _subprocess_run(['7z', 'l', self.filepath, '-ba'],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT
-        )
+        process = self._list(stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         buffer = BytesIO(process.stdout)
         yield from map(self._parse_member, iter(buffer))
 
-    def extract(self, arcname: str, f) -> None:
-        process = _subprocess_run(['7z', 'x', self.filepath, arcname, *self._args, '-so'],
-            stdout=f,
-            stderr=subprocess.STDOUT,
-        )
+    def extract(self, arcname: str, f: BinaryIO) -> None:
+        self._extract(arcname, stdout=f, stderr=subprocess.STDOUT)
 
-    def add(self, arcname: str, f) -> None:
-        process = _subprocess_run(['7z', 'a', self.filepath, *self._args, f'-si{arcname}'],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            stdin=f,
-        )
+    def add(self, arcname: str, f: BinaryIO) -> None:
+        self._add(arcname, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, stdin=f)
 
     def read(self, arcname: str) -> bytes:
-        process = _subprocess_run(['7z', 'x', self.filepath, arcname, *self._args, '-so'],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT
-        )
-        return process.stdout
+        return self._extract(arcname, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout
 
     def write(self, arcname: str, data: bytes) -> None:
-        process = _subprocess_run(['7z', 'a', self.filepath, *self._args, f'-si{arcname}'],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            input=data
-        )
+        self._add(arcname, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, input=data)
+
+    def _list(self, **kwds):
+        return _subprocess_run(['7z', 'l', self.filepath, '-ba'], **kwds)
+
+    def _extract(self, arcname, **kwds):
+        return _subprocess_run(['7z', 'x', self.filepath, arcname, *self._args, '-so'], **kwds)
+
+    def _add(self, arcname, **kwds):
+        return _subprocess_run(['7z', 'a', self.filepath, *self._args, f'-si{arcname}'], **kwds)
 
     def _parse_member(self, line: bytes) -> ComicArchiveMember:
         info, name = (line[:self._member_name_offset], line[self._member_name_offset:])
