@@ -61,6 +61,8 @@ async def worker() -> None:
 
             rename([path], dryrun=config['manager.test_mode'], root=config['manager.library_path'])
 
+            logger.debug(f'Finished processing {path}')
+
             processing_items.remove(path)
             end = time.time()
             elapsed = end - start
@@ -69,6 +71,8 @@ async def worker() -> None:
             await asyncio.sleep(2 - elapsed)
 
 def cbmanager() -> None:
+    logger.info('Starting cbmanager...')
+
     handler = LibraryHandler()
     observer = Observer()
     observer.schedule(handler, path=config['manager.library_path'], recursive=True)
