@@ -54,8 +54,10 @@ def _construct_rename_pairs(paths: List[Path], *, root: Path) -> Generator[Tuple
             dst = root / _path_from_cinfo(cinfo)
             if src != dst:
                 yield src, dst
+            else:
+                logger.debug(f'Source {src} and destination are the same - skipping rename')
         else:
-            logger.warning(f'file "{src}" contains no info xml - skipping rename')
+            logger.warning(f'File "{src}" contains no info xml - skipping rename')
 
 def _construct_rename_extra(parents: List[Tuple[Path, Path]]) -> Generator[Tuple[Path, Path], None, None]:
     for inc in config['rename.move_includes']:
