@@ -123,10 +123,10 @@ class ComicArchive(object):
     def _list(self, **kwds):
         return _subprocess_run(['7z', 'l', self.filepath, '-ba'], **kwds)
 
-    def _extract(self, arcname, **kwds):
+    def _extract(self, arcname: str, **kwds):
         return _subprocess_run(['7z', 'x', self.filepath, arcname, *self._args, '-so'], **kwds)
 
-    def _add(self, arcname, **kwds):
+    def _add(self, arcname: str, **kwds):
         return _subprocess_run(['7z', 'a', self.filepath, *self._args, f'-si{arcname}'], **kwds)
 
     def _parse_member(self, line: bytes) -> ComicArchiveMember:
