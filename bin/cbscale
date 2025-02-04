@@ -45,7 +45,7 @@ def _extract_flatten(cfile, root):
         if member.is_dir():
             continue
 
-        path = root / member.name.replace('\\', '__').replace('/', '__')
+        path = root / pathlib.Path(member.name).as_posix().replace('/', '__')
 
         with open(path, 'wb') as f:
             buffer = cfile.read(member.name)

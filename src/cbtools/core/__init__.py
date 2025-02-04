@@ -55,22 +55,22 @@ class ComicArchiveMember(object):
 class ComicArchive(object):
     _member_struct = struct.Struct('20s 6s 13s 13s')
     _member_name_offset = 52
-    _supported_file_types = {
+    _allowed_file_exts = {
         'cbz': 'zip',
         'cbr': 'rar',
         'cb7': '7z',
     }
 
-    def __init__(self, filepath: Path) -> None:
+    def __init__(self, filepath: Path, filetype: str = None) -> None:
         self.filepath = filepath
         self.volume: Optional[str] = str(float(self._parse_volume())).removesuffix('.0')
-        self._ftype = self._file_type()
-        self._args = ['-y', f'-t{self._ftype}']
+        self._type = self._file_type()
+        self._args = ['-y', f'-t{self._type}']
 
     def _file_type(self):
         ext = self.filepath.suffix.strip('.')
         try:
-            return next(y for x, y in self._supported_file_types.items() if ext in (x, y))
+            return next(y for x, y in self._allowed_file_exts.items() if ext in (x, y))
         except StopIteration:
             raise RuntimeError(f'unsupported file type "{ext}"')
 
@@ -108,8 +108,8 @@ class ComicArchive(object):
         for line in BytesIO(process.stdout):
             yield self._parse_member(line)
 
-    def extract(self, targetdir: Path = Path(''), members: List[str] = []) -> None:
-        process = subprocess.run(['7z', 'x', self.filepath, *members, *self._args, f'-o{targetdir}'],
+    def extract(self, outpath: Path = Path(''), members: List[str] = []) -> None:
+        process = subprocess.run(['7z', 'x', self.filepath, *members, *self._args, f'-o{outpath}'],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT
         )
@@ -126,7 +126,7 @@ class ComicArchive(object):
         if process.returncode != 0:
             raise RuntimeError(f'7z error code {process.returncode}')
 
-    def read(self, member: str) -> BytesIO:
+    def read(self, member: str) -> bytes:
         process = subprocess.run(['7z', 'x', self.filepath, member, *self._args, '-so'],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT
