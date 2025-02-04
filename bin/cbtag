@@ -9,7 +9,7 @@ from cbtools import configure_logging
 from cbtools.tag import AniList, cbtag
 
 PROG_NAME = 'cbtag'
-logging.getLogger(PROG_NAME)
+logger = configure_logging()
 
 def parse_args(argv=sys.argv):
     parser = argparse.ArgumentParser(prog=PROG_NAME)
