@@ -75,7 +75,7 @@ class ComicArchive(object):
         self._args = ['-y', f'-t{self._type}']
 
     def _file_type(self):
-        ext = self.filepath.suffix.strip('.')
+        ext = self.filepath.suffix.lower().strip('.')
         try:
             return next(y for x, y in self._allowed_file_exts.items() if ext in (x, y))
         except StopIteration:
