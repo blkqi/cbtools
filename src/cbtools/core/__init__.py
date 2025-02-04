@@ -138,7 +138,7 @@ class ComicArchive(object):
             input=data
         )
 
-    def _parse_member(self, line):
+    def _parse_member(self, line: bytes) -> ComicArchiveMember:
         info, name = (line[:self._member_name_offset], line[self._member_name_offset:])
         args = (x.decode().strip() for x in (name, *self._member_struct.unpack_from(info)))
         return ComicArchiveMember(*args)
