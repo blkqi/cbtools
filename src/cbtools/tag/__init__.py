@@ -166,4 +166,4 @@ def cbtag(files: List[str], series_id: Optional[int] = None, dryrun: bool = Fals
             for item in diff:
                 print(item)
         else:
-            cfile.write(ComicInfo.XML_FILENAME, cinfo.encode())
+            cfile.write(ComicInfo._xml_filename, cinfo.encode())

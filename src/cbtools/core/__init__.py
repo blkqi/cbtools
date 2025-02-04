@@ -15,9 +15,10 @@ from pathlib import Path
 from operator import itemgetter
 from typing import Any, Dict, Generator, List, Optional, Tuple, Union
 
+
 class ComicInfo(dict):
-    XSD_FILENAME: Path = importlib.resources.files(__name__).joinpath('ComicInfo.xsd')
-    XML_FILENAME: str = 'ComicInfo.xml'
+    _xml_filename: str = 'ComicInfo.xml'
+    _xsd_filename: str = 'ComicInfo.xsd'
 
     def __init__(self, *args: Any, **kwds: Any) -> None:
         super(ComicInfo, self).__init__(*args, **kwds)
@@ -33,9 +34,8 @@ class ComicInfo(dict):
             lxml.etree.SubElement(root, name).text = str(value or '')
         return lxml.etree.tostring(root, pretty_print=pretty_print, **kwds)
 
-    @staticmethod
-    def validate(tree: lxml.etree._ElementTree) -> None:
-        xsd_tree = lxml.etree.parse(ComicInfo.XSD_FILENAME)
+    def validate(self, tree: lxml.etree._ElementTree) -> None:
+        xsd_tree = lxml.etree.parse(self._xsd_path())
         lxml.etree.XMLSchema(xsd_tree).assertValid(tree)
 
     def compare(self, with_data: Dict[str, Any], excluding: List[str] = []) -> List[Tuple[str, str, List[Tuple[str, Any]]]]:
@@ -44,11 +44,15 @@ class ComicInfo(dict):
             {k: v for k, v in with_data.items() if k not in excluding})
         return list(result)
 
+    def _xsd_path(self) -> Path:
+        return importlib.resources.files(__name__).joinpath(self._xsd_filename)
+
 
 class ComicArchiveMember(object):
     def __init__(self, name, mtime, attr, size, compressed):
         self.name = name
         self.attr = attr
+        self.size = int(size)
 
     def is_dir(self):
         return self.attr.startswith('D')
@@ -92,9 +96,9 @@ class ComicArchive(object):
         return 0
 
     def info(self) -> ComicInfo:
-        buffer = self.read(ComicInfo.XML_FILENAME)
-        if buffer:
-            return ComicInfo.parse(BytesIO(buffer))
+        data = self.read(ComicInfo._xml_filename)
+        if data:
+            return ComicInfo.parse(BytesIO(data))
         else:
             return ComicInfo()
 

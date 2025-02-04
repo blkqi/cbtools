@@ -26,7 +26,7 @@ def _write_output(outpath, srcpath, dstpath):
     cfile = ComicArchive(outpath)
 
     add_paths = sorted(dstpath.iterdir())
-    info_path = srcpath / ComicInfo.XML_FILENAME
+    info_path = srcpath / ComicInfo._xml_filename
 
     if info_path.exists():
         add_paths = itertools.chain([info_path], add_paths)
