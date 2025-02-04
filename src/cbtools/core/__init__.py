@@ -41,7 +41,8 @@ class ComicInfo(dict):
     def compare(self, with_data: Dict[str, Any], excluding: List[str] = []) -> List[Tuple[str, str, List[Tuple[str, Any]]]]:
         result = dictdiffer.diff(
             {k: v for k, v in self.items() if k not in excluding},
-            {k: v for k, v in with_data.items() if k not in excluding})
+            {k: v for k, v in with_data.items() if k not in excluding}
+        )
         return list(result)
 
     def _xsd_path(self) -> Path:
