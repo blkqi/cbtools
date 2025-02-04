@@ -1,18 +1,24 @@
+import sys
 import dictdiffer
 import lxml.etree
-import pathlib
 import platform
 import re
 import shutil
 import tempfile
+import subprocess
 import zipfile
+import struct
 import importlib.resources
 
-from typing import Any, Dict, Generator, List, Optional, Tuple, Union
+from io import BytesIO
+from pathlib import Path
+from operator import itemgetter
+from typing import Any, Dict, Generator, List, Optional, Tuple, Union, BinaryIO
+
 
 class ComicInfo(dict):
-    XSD_FILENAME: pathlib.Path = importlib.resources.files(__name__).joinpath('ComicInfo.xsd')
-    XML_FILENAME: str = 'ComicInfo.xml'
+    _xml_filename: str = 'ComicInfo.xml'
+    _xsd_filename: str = 'ComicInfo.xsd'
 
     def __init__(self, *args: Any, **kwds: Any) -> None:
         super(ComicInfo, self).__init__(*args, **kwds)
@@ -28,63 +34,55 @@ class ComicInfo(dict):
             lxml.etree.SubElement(root, name).text = str(value or '')
         return lxml.etree.tostring(root, pretty_print=pretty_print, **kwds)
 
-    @staticmethod
-    def validate(tree: lxml.etree._ElementTree) -> None:
-        xsd_tree = lxml.etree.parse(ComicInfo.XSD_FILENAME)
+    def validate(self, tree: lxml.etree._ElementTree) -> None:
+        xsd_tree = lxml.etree.parse(self._xsd_path())
         lxml.etree.XMLSchema(xsd_tree).assertValid(tree)
 
     def compare(self, with_data: Dict[str, Any], excluding: List[str] = []) -> List[Tuple[str, str, List[Tuple[str, Any]]]]:
         result = dictdiffer.diff(
             {k: v for k, v in self.items() if k not in excluding},
-            {k: v for k, v in with_data.items() if k not in excluding})
+            {k: v for k, v in with_data.items() if k not in excluding}
+        )
         return list(result)
 
-class CBZFile(zipfile.ZipFile):
-    def __init__(self, file: Union[str, bytes], **kwds: Any) -> None:
-        super(CBZFile, self).__init__(file, **kwds)
-        self.info: ComicInfo = self._get_info()
+    def _xsd_path(self) -> Path:
+        return importlib.resources.files(__name__).joinpath(self._xsd_filename)
+
+
+class ComicArchiveMember(object):
+    def __init__(self, name, mtime, attr, size, compressed):
+        self.name = name
+        self.attr = attr
+        self.size = int(size)
+
+    def is_dir(self):
+        return self.attr.startswith('D')
+
+
+class ComicArchive(object):
+    _member_struct = struct.Struct('20s 6s 13s 13s')
+    _member_name_offset = 52
+    _allowed_file_exts = {
+        'cbz': 'zip',
+        'cbr': 'rar',
+        'cb7': '7z',
+    }
+
+    def __init__(self, filepath: Path, filetype: str = None) -> None:
+        self.filepath = filepath
         self.volume: Optional[str] = str(float(self._parse_volume())).removesuffix('.0')
+        self._type = filetype or self._file_type()
+        self._args = ['-y', f'-t{self._type}']
 
-    def Path(self) -> pathlib.Path:
-        return pathlib.Path(self.filename)
-
-    def extractall(self, path: Optional[Union[str, bytes]] = None, members: Optional[List[zipfile.ZipInfo]] = None, pwd: Optional[bytes] = None, flatten: bool = False) -> None:
-        if not flatten:
-            return super().extractall(path=path, members=members, pwd=pwd)
-
-        for member in self.infolist():
-            if member.is_dir():
-                continue
-
-            member.filename = member.filename.replace('/', '__')
-            self.extract(member, path)
-
-    def update_cinfo(self, cinfo: ComicInfo) -> None:
-        with tempfile.TemporaryDirectory() as tempdir:
-            temppath = pathlib.Path(tempdir) / 'cbz'
-
-            with CBZFile(temppath, mode='w') as cbzwrite:
-                cbzwrite.writestr(ComicInfo.XML_FILENAME, cinfo.encode())
-
-                for item in self.infolist():
-                    if item.filename != ComicInfo.XML_FILENAME:
-                        data = self.read(item.filename)
-                        cbzwrite.writestr(item, data)
-
-            shutil.copyfile(temppath, self.filename)
-            temppath.unlink()
-
-    def _get_info(self) -> ComicInfo:
+    def _file_type(self):
+        ext = self.filepath.suffix.lower().strip('.')
         try:
-            with self.open(ComicInfo.XML_FILENAME) as c:
-                return ComicInfo.parse(c)
-        except KeyError:
-            pass
-
-        return ComicInfo()
+            return next(y for x, y in self._allowed_file_exts.items() if ext in (x, y))
+        except StopIteration:
+            raise RuntimeError(f'unsupported file type "{ext}"')
 
     def _parse_volume(self) -> Optional[str]:
-        filename_parts = pathlib.Path(self.filename).stem.split(' ')
+        filename_parts = self.filepath.stem.split(' ')
         filename_parts.reverse()
 
         for part in filename_parts:
@@ -98,7 +96,55 @@ class CBZFile(zipfile.ZipFile):
         # TODO: raise error
         return 0
 
-def expand_paths(paths: List[pathlib.Path]) -> Generator[pathlib.Path, None, None]:
+    def info(self) -> ComicInfo:
+        data = self.read(ComicInfo._xml_filename)
+        if data:
+            return ComicInfo.parse(BytesIO(data))
+        else:
+            return ComicInfo()
+
+    def list(self) -> Generator[ComicArchiveMember, None, None]:
+        process = self._list(stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        buffer = BytesIO(process.stdout)
+        yield from map(self._parse_member, iter(buffer))
+
+    def extract(self, arcname: str, f: BinaryIO) -> None:
+        self._extract(arcname, stdout=f, stderr=subprocess.STDOUT)
+
+    def add(self, arcname: str, f: BinaryIO) -> None:
+        self._add(arcname, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, stdin=f)
+
+    def read(self, arcname: str) -> bytes:
+        return self._extract(arcname, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout
+
+    def write(self, arcname: str, data: bytes) -> None:
+        self._add(arcname, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, input=data)
+
+    def _list(self, **kwds):
+        return _subprocess_run(['7z', 'l', self.filepath, '-ba'], **kwds)
+
+    def _extract(self, arcname: str, **kwds):
+        return _subprocess_run(['7z', 'x', self.filepath, arcname, *self._args, '-so'], **kwds)
+
+    def _add(self, arcname: str, **kwds):
+        return _subprocess_run(['7z', 'a', self.filepath, *self._args, f'-si{arcname}'], **kwds)
+
+    def _parse_member(self, line: bytes) -> ComicArchiveMember:
+        info, name = (line[:self._member_name_offset], line[self._member_name_offset:])
+        args = (x.decode().strip() for x in (name, *self._member_struct.unpack_from(info)))
+        return ComicArchiveMember(*args)
+
+
+def _subprocess_run(cmd = List[str], **kwds):
+    process = subprocess.run(cmd, **kwds)
+
+    if process.returncode != 0:
+        raise RuntimeError(f'{cmd!r} returned error code {process.returncode}\n')
+
+    return process
+
+
+def expand_paths(paths: List[Path]) -> Generator[Path, None, None]:
     for path in paths:
         if '*' in path.name:
             yield from expand_paths(list(path.parent.glob(path.name)))

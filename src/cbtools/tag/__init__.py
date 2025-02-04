@@ -8,7 +8,7 @@ from typing import Optional, List, Dict, Any
 
 import cbtools.tag.extensions
 from cbtools.config import config
-from cbtools.core import ComicInfo, CBZFile, expand_paths
+from cbtools.core import ComicInfo, ComicArchive, expand_paths
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
@@ -154,18 +154,18 @@ def cbtag(files: List[str], series_id: Optional[int] = None, dryrun: bool = Fals
 
             cinfo = AniList().search(series_id).to_cinfo()
 
-        with CBZFile(path) as cfile:
-            if cfile.volume:
-                cinfo['Volume'] = cfile.volume
+        cfile = ComicArchive(path)
+        if cfile.volume:
+            cinfo['Volume'] = cfile.volume
 
-            diff = cfile.info.compare(cinfo, excluding=['Notes'])
+        diff = cfile.info().compare(cinfo, excluding=['Notes'])
 
-            if not diff:
-                logger.info(f'{path}: no changes required')
-                continue
+        if not diff:
+            logger.info(f'{path}: no changes required')
+            continue
 
-            if dryrun:
-                for item in diff:
-                    print(item)
-            else:
-                cfile.update_cinfo(cinfo)
+        if dryrun:
+            for item in diff:
+                print(item)
+        else:
+            cfile.write(ComicInfo._xml_filename, cinfo.encode())
