@@ -96,7 +96,7 @@ class ComicArchive(object):
         else:
             return ComicInfo()
 
-    def list(self):
+    def list(self) -> Generator[ComicArchiveMember, None, None]:
         process = subprocess.run(['7z', 'l', self.filepath, '-ba'],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT
