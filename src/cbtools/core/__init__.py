@@ -103,23 +103,13 @@ class ComicArchive(object):
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT
         )
-
         buffer = BytesIO(process.stdout)
         yield from map(self._parse_member, iter(buffer))
 
-    def read(self, arcname: str) -> bytes:
+    def extract(self, arcname: str, f) -> None:
         process = _subprocess_run(['7z', 'x', self.filepath, arcname, *self._args, '-so'],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT
-        )
-
-        return process.stdout
-
-    def write(self, arcname: str, data: bytes) -> None:
-        process = _subprocess_run(['7z', 'a', self.filepath, *self._args, f'-si{arcname}'],
-            stdout=subprocess.PIPE,
+            stdout=f,
             stderr=subprocess.STDOUT,
-            input=data
         )
 
     def add(self, arcname: str, f) -> None:
@@ -127,6 +117,20 @@ class ComicArchive(object):
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             stdin=f,
+        )
+
+    def read(self, arcname: str) -> bytes:
+        process = _subprocess_run(['7z', 'x', self.filepath, arcname, *self._args, '-so'],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT
+        )
+        return process.stdout
+
+    def write(self, arcname: str, data: bytes) -> None:
+        process = _subprocess_run(['7z', 'a', self.filepath, *self._args, f'-si{arcname}'],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            input=data
         )
 
     def _parse_member(self, line):

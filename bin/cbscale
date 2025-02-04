@@ -47,8 +47,7 @@ def _extract_flatten(cfile, root):
         path = root / pathlib.Path(member.name).as_posix().replace('/', '__')
 
         with open(path, 'wb') as f:
-            buffer = cfile.read(member.name)
-            f.write(buffer)
+            cfile.extract(member.name, f)
 
 def _upscale_images(srcpath, dstpath, scale, noise, ftype, gpuid,
                  entrypoint=WAIFU2X_BIN, model=WAIFU2X_MODEL):
