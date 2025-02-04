@@ -77,19 +77,21 @@ def _upscale_images(srcpath, dstpath, scale, noise, ftype, gpuid,
         sys.stderr.write(stdout.decode())
         raise RuntimeError(f'waifu2x-ncnn-vulkan error code {process.returncode}')
 
+def _output_filename(cfile, root=None):
+    stem = '_'.join((cfile.filepath.stem, OUTFILE_SUFFIX))
+    path = root or cfile.filepath.parent
+    return (path / (str(stem) + '.cbz'))
+
 def upscale(cfile, path, **kwds):
     with tempfile.TemporaryDirectory() as srcdir, \
             tempfile.TemporaryDirectory() as dstdir:
 
         srcpath = pathlib.Path(srcdir)
         dstpath = pathlib.Path(dstdir)
-
-        stem = '_'.join((cfile.filepath.stem, OUTFILE_SUFFIX))
-        path = path or cfile.filepath.parent
-        outpath = (path / stem).with_suffix('.cbz')
+        outpath = _output_filename(cfile, root=path)
 
         if outpath.exists():
-            raise RuntimeError('path "{output}" already exists!')
+            raise RuntimeError(f'path "{outpath}" already exists!')
 
         _extract_flatten(cfile, srcpath)
         _upscale_images(srcpath, dstpath, **kwds)
