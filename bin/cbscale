@@ -53,29 +53,21 @@ def _upscale_images(srcpath, dstpath, scale, noise, ftype, gpuid,
                  entrypoint=WAIFU2X_BIN, model=WAIFU2X_MODEL):
     logger.info(f'Upscaling image data')
 
+    args = ['-i', srcpath, '-o', dstpath,
+            '-s', str(scale), '-n', str(noise),
+            '-f', ftype, '-g', gpuid, '-m', model]
+
     try:
-        process = subprocess.Popen(
-            [
-                entrypoint,
-                '-i', srcpath,
-                '-o', dstpath,
-                '-s', str(scale),
-                '-n', str(noise),
-                '-f', ftype,
-                '-g', gpuid,
-                '-m', model,
-            ],
+        process = subprocess.run([entrypoint, *args],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT
         )
     except FileNotFoundError:
-        raise RuntimeError(f'waifu2x-ncnn-vulkan not found at {entrypoint}')
-
-    stdout, _ = process.communicate()
+        raise RuntimeError(f'waifu2x-ncnn-vulkan not found: {entrypoint}')
 
     if process.returncode != 0:
-        sys.stderr.write(stdout.decode())
-        raise RuntimeError(f'waifu2x-ncnn-vulkan error code {process.returncode}')
+        sys.stderr.write(process.stdout.decode())
+        raise RuntimeError(f'waifu2x-ncnn-vulkan error code: {process.returncode}')
 
 def _output_filename(cfile, root=None):
     stem = '_'.join((cfile.filepath.stem, OUTFILE_SUFFIX))
