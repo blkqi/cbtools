@@ -14,11 +14,12 @@ from io import BytesIO
 from pathlib import Path
 from operator import itemgetter
 from typing import Any, Dict, Generator, List, Optional, Tuple, Union, BinaryIO
+from cbtools.constants import COMICINFO_XML_NAME, COMICINFO_XSD_NAME
 
 
 class ComicInfo(dict):
-    _xml_filename: str = 'ComicInfo.xml'
-    _xsd_filename: str = 'ComicInfo.xsd'
+    _xml_filename: str = COMICINFO_XML_NAME
+    _xsd_filename: str = COMICINFO_XSD_NAME
 
     def __init__(self, *args: Any, **kwds: Any) -> None:
         super(ComicInfo, self).__init__(*args, **kwds)
@@ -97,7 +98,7 @@ class ComicArchive(object):
         return 0
 
     def info(self) -> ComicInfo:
-        data = self.read(ComicInfo._xml_filename)
+        data = self.read(COMICINFO_XML_NAME)
         if data:
             return ComicInfo.parse(BytesIO(data))
         else:

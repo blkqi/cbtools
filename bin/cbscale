@@ -12,6 +12,7 @@ import logging
 
 from cbtools import configure_logging
 from cbtools.core import ComicArchive, ComicInfo, expand_paths
+from cbtools.constants import COMICINFO_XML_NAME
 
 PROG_NAME = 'cbscale'
 logger = configure_logging()
@@ -26,7 +27,7 @@ def _write_output(outpath, srcpath, dstpath):
     cfile = ComicArchive(outpath)
 
     add_paths = sorted(dstpath.iterdir())
-    info_path = srcpath / ComicInfo._xml_filename
+    info_path = srcpath / COMICINFO_XML_NAME
 
     if info_path.exists():
         add_paths = itertools.chain([info_path], add_paths)
