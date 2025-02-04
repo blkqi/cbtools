@@ -9,6 +9,7 @@ from typing import Optional, List, Dict, Any
 import cbtools.tag.extensions
 from cbtools.config import config
 from cbtools.core import ComicInfo, ComicArchive, expand_paths
+from cbtools.core.constants import COMICINFO_XML_NAME
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
@@ -168,4 +169,4 @@ def cbtag(files: List[str], series_id: Optional[int] = None, dryrun: bool = Fals
             for item in diff:
                 print(item)
         else:
-            cfile.write(ComicInfo._xml_filename, cinfo.encode())
+            cfile.write(COMICINFO_XML_NAME, cinfo.encode())
