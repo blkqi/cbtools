@@ -10,7 +10,7 @@ from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler, FileSystemEvent
 
 from cbtools.config import config
-from cbtools.core import expand_paths
+from cbtools.core import ComicArchive, expand_paths
 from cbtools.manager.api import app
 from cbtools.manager.queue import manager_queue
 from cbtools.tag import AniList, cbtag
@@ -29,7 +29,7 @@ class LibraryHandler(FileSystemEventHandler):
             logger.debug(f'Skipping {path.name} as the folder is currently processing')
             return
 
-        if path.suffix.lower() == '.cbz':
+        if path.suffix.strip('.').lower() in ComicArchive._allowed_file_exts.keys():
             logger.debug(f'CBZ file {path.name} updated in {path.parent}')
             manager_queue.enqueue(path.parent)
 
