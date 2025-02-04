@@ -97,61 +97,43 @@ class ComicArchive(object):
             return ComicInfo()
 
     def list(self) -> Generator[ComicArchiveMember, None, None]:
-        process = subprocess.run(['7z', 'l', self.filepath, '-ba'],
+        process = _subprocess_run(['7z', 'l', self.filepath, '-ba'],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT
         )
 
-        if process.returncode != 0:
-            raise RuntimeError(f'7z error code {process.returncode}')
-
-        for line in BytesIO(process.stdout):
-            yield self._parse_member(line)
-
-    def extract(self, outpath: Path = Path(''), members: List[str] = []) -> None:
-        process = subprocess.run(['7z', 'x', self.filepath, *members, *self._args, f'-o{outpath}'],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT
-        )
-
-        if process.returncode != 0:
-            raise RuntimeError(f'7z error code {process.returncode}')
-
-    def add(self, paths: List[Path]) -> None:
-        process = subprocess.run(['7z', 'a', self.filepath, *paths, *self._args],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT
-        )
-
-        if process.returncode != 0:
-            raise RuntimeError(f'7z error code {process.returncode}')
+        buffer = BytesIO(process.stdout)
+        yield from map(self._parse_member, iter(buffer)):
 
     def read(self, member: str) -> bytes:
-        process = subprocess.run(['7z', 'x', self.filepath, member, *self._args, '-so'],
+        process = _subprocess_run(['7z', 'x', self.filepath, member, *self._args, '-so'],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT
         )
-
-        if process.returncode != 0:
-            sys.stderr.buffer.write(process.stdout)
-            raise RuntimeError(f'7z error code {process.returncode}')
 
         return process.stdout
 
     def write(self, member: str, data: bytes) -> None:
-        process = subprocess.run(['7z', 'a', self.filepath, *self._args, f'-si{member}'],
+        process = _subprocess_run(['7z', 'a', self.filepath, *self._args, f'-si{member}'],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             input=data
         )
 
-        if process.returncode != 0:
-            raise RuntimeError(f'7z error code {process.returncode}\n')
-
     def _parse_member(self, line):
         info, name = (line[:self._member_name_offset], line[self._member_name_offset:])
         data = (x.decode().strip() for x in (*self._member_struct.unpack_from(info), name))
         return ComicArchiveMember(*data)
+
+
+def _subprocess_run(cmd = List[str], **kwds):
+    process = subprocess.run(cmd, **kwds)
+
+    if process.returncode != 0:
+        raise RuntimeError(f'{cmd!r} returned error code {process.returncode}\n')
+
+    return process
+
 
 def expand_paths(paths: List[Path]) -> Generator[Path, None, None]:
     for path in paths:
