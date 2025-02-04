@@ -9,7 +9,7 @@ from typing import Optional, List, Dict, Any
 import cbtools.tag.extensions
 from cbtools.config import config
 from cbtools.core import ComicInfo, ComicArchive, expand_paths
-from cbtools.constants import COMICINFO_XML_NAME
+from cbtools.core.constants import COMICINFO_XML_NAME
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())

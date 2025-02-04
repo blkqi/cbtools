@@ -12,7 +12,7 @@ import logging
 
 from cbtools import configure_logging
 from cbtools.core import ComicArchive, ComicInfo, expand_paths
-from cbtools.constants import COMICINFO_XML_NAME
+from cbtools.core.constants import COMICINFO_XML_NAME
 
 PROG_NAME = 'cbscale'
 logger = configure_logging()
