@@ -1,25 +1,25 @@
+"""The cbtools rename module."""
+
 import os
 import shutil
 import string
 import logging
 
-from functools import reduce
-from itertools import chain, groupby
 from pathlib import Path
-from operator import itemgetter
-from collections import Counter
 from typing import List, Tuple, Generator, Dict, Any
-from cbtools.config import config
-from cbtools.core import ComicArchive, expand_paths
+from .functools import chain, unique, not_unique
+from .config import config
+from .core import ComicArchive, expand_paths
+from .log import logger
 
-logger = logging.getLogger(__name__)
-logger.addHandler(logging.NullHandler())
 
 def _allowed_chars() -> str:
     return string.ascii_letters + string.digits + " _-~.'!@#$%^&()[]{}"
 
+
 def _sanitize_paths(value: str) -> str:
     return ''.join(c for c in value if c in _allowed_chars())
+
 
 def _formatters() -> Tuple[Tuple[str, callable], ...]:
     def volume_formatter(volume: str) -> str:
@@ -33,9 +33,8 @@ def _formatters() -> Tuple[Tuple[str, callable], ...]:
         ('Volume', volume_formatter),
     )
 
-_default_missing = ''
 
-def _path_from_cinfo(cinfo: Dict[str, Any], default: str = _default_missing) -> Path:
+def _path_from_cinfo(cinfo: Dict[str, Any], default: str = '') -> Path:
     # prefer localized series to series, if it exists
     cinfo['Series'] = cinfo.get('LocalizedSeries') or cinfo.get('Series')
 
@@ -45,6 +44,7 @@ def _path_from_cinfo(cinfo: Dict[str, Any], default: str = _default_missing) -> 
     strpath = template.substitute(defaults, **values)
 
     return Path(strpath.strip() + '.cbz')
+
 
 def _construct_rename_pairs(paths: List[Path], *, root: Path) -> Generator[Tuple[Path, Path], None, None]:
     for src in paths:
@@ -58,11 +58,13 @@ def _construct_rename_pairs(paths: List[Path], *, root: Path) -> Generator[Tuple
         else:
             logger.warning(f'File "{src}" contains no info xml - skipping rename')
 
+
 def _construct_rename_extra(parents: List[Tuple[Path, Path]]) -> Generator[Tuple[Path, Path], None, None]:
     for inc in config['rename.move_includes']:
         for src, dst in parents:
             if (src / inc).exists():
                 yield (src / inc, dst / inc)
+
 
 def _rename_file(src: Path, dst: Path) -> None:
     dst.parent.mkdir(parents=True, exist_ok=True)
@@ -81,14 +83,6 @@ def _rename_file(src: Path, dst: Path) -> None:
     shutil.copyfile(src, dst)
     src.unlink()
 
-def _unique(iterable):
-    return map(itemgetter(0), groupby(iterable))
-
-def _unique_count(iterable):
-    return ((x, sum(1 for _ in g)) for x, g in groupby(iterable))
-
-def _not_unique(iterable):
-    return (x for x, n in _unique_count(iterable) if n > 1)
 
 def _check_has_errors(pairs: Tuple[Path, Path]) -> bool:
     log_noexist = lambda src: logger.error(f'Source {src} doesn\'t exist!') or src
@@ -104,6 +98,7 @@ def _check_has_errors(pairs: Tuple[Path, Path]) -> bool:
                        map(log_collide, gen_collide))
 
     return any(list(all_errors))
+
 
 def rename(files: List[Path], root: Path = Path(''), dryrun: bool = False) -> None:
     paths = expand_paths(files)

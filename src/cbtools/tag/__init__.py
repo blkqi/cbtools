@@ -1,18 +1,21 @@
-import importlib.resources
-import jmespath
-import requests
+"""Core components of package cbtools."""
+
 import time
 import logging
+import jmespath
+import requests
+import importlib.resources
 
 from typing import Optional, List, Dict, Any
+from ..config import config
+from ..core import ComicInfo, ComicArchive, expand_paths
+from ..constants import COMICINFO_XML_NAME
+from ..tag import extensions
 
-import cbtools.tag.extensions
-from cbtools.config import config
-from cbtools.core import ComicInfo, ComicArchive, expand_paths
-from cbtools.core.constants import COMICINFO_XML_NAME
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
+
 
 class AniListAdapter(requests.adapters.HTTPAdapter):
     def __init__(self, *args: Any, **kwds: Any) -> None:
@@ -38,6 +41,7 @@ class AniListAdapter(requests.adapters.HTTPAdapter):
         logger.warn(f'AniList rate limit exceeded! Retry in {period} seconds.')
         time.sleep(period)
 
+
 class AniList:
     def __init__(self) -> None:
         self.api_url = 'https://graphql.anilist.co'
@@ -59,6 +63,7 @@ class AniList:
         response.raise_for_status()
 
         return AniListResponse(response.json())
+
 
 class AniListResponse(dict):
     ANILIST_COMICINFO_JMESMAP: Dict[str, str] = {
@@ -111,10 +116,11 @@ class AniListResponse(dict):
     def _apply_extensions(self, cinfo: ComicInfo) -> None:
         for extension in config['tag.extensions']:
             try:
-                module = importlib.import_module(f'cbtools.tag.extensions.{extension}')
+                module = importlib.import_module(f'extensions.{extension}')
                 module.extension(cinfo, self.media)
             except ImportError:
                 logger.error(f'Failed to import extension {extension}')
+
 
 def _get_series_id(path: 'Path') -> Optional[int]:
     if path.is_file():
@@ -125,6 +131,7 @@ def _get_series_id(path: 'Path') -> Optional[int]:
             return int(file.read().strip())
     except FileNotFoundError:
         return None
+
 
 def _write_series_id(path: 'Path', series_id: int) -> None:
     if not config['tag.write_series_id_file']:
@@ -137,6 +144,7 @@ def _write_series_id(path: 'Path', series_id: int) -> None:
 
     with open(series_id_file_path, 'w') as file:
         file.write(str(series_id))
+
 
 def cbtag(files: List[str], series_id: Optional[int] = None, dryrun: bool = False) -> None:
     paths = expand_paths(files)

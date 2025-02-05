@@ -12,7 +12,7 @@ logger.addHandler(logging.NullHandler())
 
 
 def configure_logging() -> logging.Logger:
-    handler = logging.handlers.StreamHandler()
+    handler = logging.StreamHandler()
     handler.setFormatter(logging.Formatter(config['logging.format']))
     logger.addHandler(handler)
     logger.setLevel(config['logging.level'])
