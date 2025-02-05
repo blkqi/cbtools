@@ -16,10 +16,12 @@ from cbtools.manager.queue import manager_queue
 from cbtools.tag import AniList, cbtag
 from cbtools.rename import rename
 
+
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
 processing_items: Set[pathlib.Path] = set()
+
 
 class LibraryHandler(PatternMatchingEventHandler):
     def __init__(self):
@@ -51,6 +53,7 @@ class LibraryHandler(PatternMatchingEventHandler):
             logger.debug(f"{config['tag.series_id_filename']} update in {path.parent}")
             manager_queue.enqueue(path.parent)
 
+
 async def worker() -> None:
     while True:
         path = manager_queue.dequeue()
@@ -81,6 +84,7 @@ async def worker() -> None:
 
         if elapsed < 2:
             await asyncio.sleep(2 - elapsed)
+
 
 def cbmanager() -> None:
     logger.info('Starting cbmanager...')
