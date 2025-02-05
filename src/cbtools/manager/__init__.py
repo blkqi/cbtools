@@ -66,6 +66,7 @@ async def worker() -> None:
             logger.debug(f'Processing {path}')
 
             # TODO: i/o bound ops should run async
+            # TODO: handle more errors
 
             try:
                 cbtag([path], dryrun=config['manager.test_mode'])
@@ -74,7 +75,12 @@ async def worker() -> None:
                 processing_items.remove(path)
                 continue
 
-            rename([path], dryrun=config['manager.test_mode'], root=config['manager.library_path'])
+            try:
+                rename([path], dryrun=config['manager.test_mode'], root=config['manager.library_path'])
+            except OSError as e:
+                logger.error(e)
+                processing_items.remove(path)
+                continue
 
             logger.debug(f'Finished processing {path}')
 
@@ -103,3 +109,4 @@ def cbmanager() -> None:
 
     observer.stop()
     observer.join()
+    thread.join()
