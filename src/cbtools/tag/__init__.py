@@ -11,10 +11,7 @@ from ..config import config
 from ..core import ComicInfo, ComicArchive, expand_paths
 from ..constants import COMICINFO_XML_NAME
 from ..tag import extensions
-
-
-logger = logging.getLogger(__name__)
-logger.addHandler(logging.NullHandler())
+from ..log import logger
 
 
 class AniListAdapter(requests.adapters.HTTPAdapter):

@@ -15,10 +15,7 @@ from ..config import config
 from ..core import ComicArchive, expand_paths
 from ..tag import AniList, cbtag
 from ..rename import rename
-
-
-logger = logging.getLogger(__name__)
-logger.addHandler(logging.NullHandler())
+from ..log import logger
 
 
 processing_items: Set[pathlib.Path] = set()
