@@ -2,14 +2,17 @@ import pathlib
 
 from flask import Flask, request
 
-from cbtools.config import config
-from cbtools.manager.queue import manager_queue
+from .queue import manager_queue
+from ..config import config
+
 
 app = Flask(__name__)
+
 
 @app.route("/")
 def info():
     return config
+
 
 @app.route("/rescan", methods=['POST'])
 def rescan():
@@ -29,17 +32,20 @@ def rescan():
 
     return ("", 204)
 
+
 @app.route("/flush", methods=['POST'])
 def flush():
     manager_queue.flush()
 
     return ("", 204)
 
+
 @app.route("/clear", methods=['POST'])
 def clear():
     manager_queue.clear()
 
     return ("", 204)
+
 
 @app.route("/list", methods=['GET'])
 def list_items():

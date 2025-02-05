@@ -9,16 +9,17 @@ from waitress import serve
 from watchdog.observers import Observer
 from watchdog.events import PatternMatchingEventHandler, FileSystemEvent
 
-from cbtools.config import config
-from cbtools.core import ComicArchive, expand_paths
-from cbtools.manager.api import app
-from cbtools.manager.queue import manager_queue
-from cbtools.tag import AniList, cbtag
-from cbtools.rename import rename
+from .api import app
+from .queue import manager_queue
+from ..config import config
+from ..core import ComicArchive, expand_paths
+from ..tag import AniList, cbtag
+from ..rename import rename
 
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
+
 
 processing_items: Set[pathlib.Path] = set()
 
