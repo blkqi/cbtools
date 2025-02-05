@@ -88,8 +88,8 @@ async def worker() -> None:
             end = time.time()
             elapsed = end - start
 
-        if elapsed < 2:
-            await asyncio.sleep(2 - elapsed)
+        if elapsed < config['manager.processing_interval']:
+            await asyncio.sleep(config['manager.processing_interval'] - elapsed)
 
 
 def cbmanager() -> None:
@@ -109,4 +109,3 @@ def cbmanager() -> None:
 
     observer.stop()
     observer.join()
-    thread.join()
