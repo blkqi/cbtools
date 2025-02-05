@@ -11,7 +11,6 @@ from collections import Counter
 from typing import List, Tuple, Generator, Dict, Any
 from cbtools.config import config
 from cbtools.core import ComicArchive, expand_paths
-from operator import itemgetter
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
