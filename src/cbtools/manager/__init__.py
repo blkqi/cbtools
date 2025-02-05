@@ -7,7 +7,7 @@ import threading
 from typing import Set
 from waitress import serve
 from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler, FileSystemEvent
+from watchdog.events import PatternMatchingEventHandler, FileSystemEvent
 
 from cbtools.config import config
 from cbtools.core import ComicArchive, expand_paths
@@ -21,20 +21,32 @@ logger.addHandler(logging.NullHandler())
 
 processing_items: Set[pathlib.Path] = set()
 
-class LibraryHandler(FileSystemEventHandler):
+class LibraryHandler(PatternMatchingEventHandler):
+    def __init__(self):
+        patterns = [f'*.{ext}' for ext in list(ComicArchive._allowed_file_exts.keys()) + ['txt']]
+
+        super().__init__(patterns=patterns, ignore_patterns=[], ignore_directories=True, case_sensitive=False)
+
     def on_created(self, event: FileSystemEvent) -> None:
         path = pathlib.Path(event.src_path)
 
         if path.parent in processing_items:
             return
 
-        if path.suffix.strip('.').lower() in ComicArchive._allowed_file_exts.keys():
-            logger.debug(f'CBZ file {path.name} updated in {path.parent}')
-            manager_queue.enqueue(path.parent)
+        self._handle_comic_archive(path)
+        self._handle_series_id_file(path)
 
     def on_modified(self, event: FileSystemEvent) -> None:
         path = pathlib.Path(event.src_path)
 
+        self._handle_series_id_file(path)
+
+    def _handle_comic_archive(self, path: pathlib.Path) -> None:
+        if path.suffix.strip('.').lower() in ComicArchive._allowed_file_exts.keys():
+            logger.debug(f'CBZ file {path.name} updated in {path.parent}')
+            manager_queue.enqueue(path.parent)
+
+    def _handle_series_id_file(self, path: pathlib.Path) -> None:
         if path.name == config['tag.series_id_filename'] and path.parent not in processing_items:
             logger.debug(f"{config['tag.series_id_filename']} update in {path.parent}")
             manager_queue.enqueue(path.parent)
