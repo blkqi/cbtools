@@ -5,7 +5,7 @@ from logging.handlers import TimedRotatingFileHandler
 
 from .config import config
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__package__)
 logger.addHandler(logging.NullHandler())
 
 def configure_logging() -> logging.Logger:
