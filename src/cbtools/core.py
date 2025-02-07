@@ -98,7 +98,7 @@ class ComicArchive(object):
         matching_vols = len([x for x in self.filepath.parent.iterdir() if x.suffix == self.filepath.suffix])
 
         if matching_vols == 1 and self.info().get('Count') == '1':
-            return 1
+            return '1'
 
         # TODO: raise error
         return 0
