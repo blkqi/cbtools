@@ -1,0 +1,81 @@
+#!/usr/bin/env python
+
+import os
+import sys
+import json
+import argparse
+import logging
+
+from pathlib import Path
+
+from cbtools import configure_logging
+from cbtools.core import ComicArchive, expand_paths
+from cbtools.rename import rename
+from cbtools.tag import cbtag
+
+logger = configure_logging()
+
+def cbinfo(files):
+    files = expand_paths(files)
+
+    for path in files:
+        cfile = ComicArchive(path)
+        print(json.dumps(cfile.info(), indent=2))
+
+def parse_args(argv=sys.argv):
+    parser = argparse.ArgumentParser(prog='cb')
+    subparsers = parser.add_subparsers(dest='command')
+
+    parser_info = subparsers.add_parser('info')
+    parser_info.add_argument('files', nargs='+', type=Path)
+
+    parser_rename = subparsers.add_parser('rename')
+    parser_rename.add_argument('files', nargs='+', type=Path)
+    parser_rename.add_argument('--path', dest='root', type=Path, default=Path(''))
+    parser_rename.add_argument('--dryrun', action='store_true')
+    parser_rename.add_argument('--debug', action='store_true')
+
+    parser_tag = subparsers.add_parser('tag')
+    parser_tag.add_argument('files', nargs='*', type=Path)
+    parser_tag.add_argument('--anilist', dest='series_id', type=int)
+    parser_tag.add_argument('--dryrun', action='store_true')
+
+    args = parser.parse_args(argv[1:])
+
+    return args
+
+def get_args_dict(args):
+    if hasattr(args, 'debug'):
+        if args.debug:
+            logger.setLevel(logging.DEBUG)
+        delattr(args, 'debug')
+
+    if hasattr(args, 'command'):
+        delattr(args, 'command')
+
+    return vars(args)
+
+def main():
+    args = parse_args()
+
+    commands = {
+        'info': cbinfo,
+        'tag': cbtag,
+        'rename': rename,
+    }
+
+    for command in commands:
+        if args.command == command:
+            try:
+                commands[command](**get_args_dict(args))
+                break
+            except KeyboardInterrupt:
+                return 1
+    else:
+        logger.error('Invalid command: %s', args.command)
+        return 1
+
+    return 0
+
+if __name__ == '__main__':
+    sys.exit(main())
