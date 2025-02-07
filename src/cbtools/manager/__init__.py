@@ -11,6 +11,7 @@ from watchdog.observers import Observer
 from watchdog.events import PatternMatchingEventHandler, FileSystemEvent
 
 from cbtools.log import logger
+from cbtools.config import config
 from cbtools.core import ComicArchive, expand_paths
 from cbtools.manager.api import app
 from cbtools.manager.queue import manager_queue
