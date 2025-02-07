@@ -5,8 +5,8 @@ import pathlib
 
 from typing import Dict, Any
 
-logger = logging.getLogger(__name__)
-logger.addHandler(logging.NullHandler())
+from cbtools.log import logger
+
 
 CONFIG_FILE_PATH: str = os.getenv('CONFIG_FILE_PATH', os.getcwd() + '/config.json')
 DEFAULT_CONFIG: Dict[str, Any] = {

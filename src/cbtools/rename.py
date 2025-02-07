@@ -9,11 +9,11 @@ from pathlib import Path
 from operator import itemgetter
 from collections import Counter
 from typing import List, Tuple, Generator, Dict, Any
-from cbtools.config import config
-from cbtools.core import ComicArchive, expand_paths
 
-logger = logging.getLogger(__name__)
-logger.addHandler(logging.NullHandler())
+from cbtools.log import logger
+from cbtools.core import ComicArchive, expand_paths
+from cbtools.config import config
+
 
 def _allowed_chars() -> str:
     return string.ascii_letters + string.digits + " _-~.'!@#$%^&()[]{}"
