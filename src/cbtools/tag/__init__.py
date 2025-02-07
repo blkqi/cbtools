@@ -5,6 +5,7 @@ import time
 import logging
 
 from pathlib import Path
+from functools import lru_cache
 from typing import Optional, List, Dict, Any
 
 from cbtools.log import logger
@@ -46,6 +47,7 @@ class AniList:
         self.session.mount('http://', adapter)
         self.session.mount('https://', adapter)
 
+    @lru_cache(1)
     def search(self, series_id: int) -> 'AniListResponse':
         media_format = 'MANGA'
         query = importlib.resources.files(__name__).joinpath('anilistid.gql').open().read()
@@ -137,35 +139,41 @@ def _write_series_id(path: 'Path', series_id: int) -> None:
     with open(series_id_file_path, 'w') as file:
         file.write(str(series_id))
 
+def _fetch_comic_info(client: AniList,
+                      path: Path,
+                      series_id: Optional[int] = None,
+                      dryrun: bool = False) -> ComicInfo:
+
+    series_id = series_id or _get_series_id(path)
+
+    if not series_id:
+        raise NameError(f'No series ID specified and no {config["tag.series_id_filename"]} found in path!')
+
+    if not dryrun:
+        _write_series_id(path.parent, series_id)
+
+    return client.search(series_id).to_cinfo()
+
+def _tag_comic(path: Path, cinfo: ComicInfo, dryrun: bool = False) -> None:
+    cfile = ComicArchive(path)
+
+    if cfile.volume:
+        cinfo['Volume'] = cfile.volume
+
+    diff = (cfile.info()).compare(cinfo, excluding=['Notes'])
+
+    if not diff:
+        logger.info(f'{path}: no changes required')
+        return
+
+    if dryrun:
+        for item in diff:
+            print(item)
+    else:
+        cfile.write(COMICINFO_XML_NAME, cinfo.encode())
+
 def tag(files: List[Path], series_id: Optional[int] = None, dryrun: bool = False) -> None:
-    paths = expand_paths(files)
-    cinfo = None
-
-    for path in paths:
-        if not series_id:
-            series_id = _get_series_id(path)
-
-            if not series_id:
-                raise NameError(f"No series ID specified and no {config['tag.series_id_filename']} found in path!")
-
-        if not cinfo:
-            if not dryrun:
-                _write_series_id(path.parent, series_id)
-
-            cinfo = AniList().search(series_id).to_cinfo()
-
-        cfile = ComicArchive(path)
-        if cfile.volume:
-            cinfo['Volume'] = cfile.volume
-
-        diff = cfile.info().compare(cinfo, excluding=['Notes'])
-
-        if not diff:
-            logger.info(f'{path}: no changes required')
-            continue
-
-        if dryrun:
-            for item in diff:
-                print(item)
-        else:
-            cfile.write(COMICINFO_XML_NAME, cinfo.encode())
+    client = AniList()
+    for path in expand_paths(files):
+        cinfo = _fetch_comic_info(client, path, series_id, dryrun)
+        _tag_comic(path, cinfo, dryrun)
