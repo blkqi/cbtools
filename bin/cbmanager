@@ -4,11 +4,11 @@ import logging
 
 from cbtools import configure_logging, configure_file_logging
 from cbtools.config import config
-from cbtools.manager import cbmanager
+from cbtools.manager import manager
 
 PROG_NAME = 'cbmanager'
 configure_logging()
 configure_file_logging(PROG_NAME)
 
 if __name__ == "__main__":
-    cbmanager()
+    manager()

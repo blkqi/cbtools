@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import pathlib
+import requests
 import time
 import threading
 
@@ -10,13 +11,20 @@ from watchdog.observers import Observer
 from watchdog.events import PatternMatchingEventHandler, FileSystemEvent
 
 from cbtools.log import logger
-from cbtools.core import ComicArchive, expand_paths
 from cbtools.config import config
-from cbtools.tag import AniList, cbtag
+from cbtools.core import ComicArchive, expand_paths
+from cbtools.manager.api import app
+from cbtools.manager.queue import manager_queue
+from cbtools.tag import AniList, tag
 from cbtools.rename import rename
 from cbtools.manager.api import app
 from cbtools.manager.queue import manager_queue
 
+
+API_BASE_URL = f"http://localhost:{config['manager.api_port']}"
+
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
 
 processing_items: Set[pathlib.Path] = set()
 
@@ -66,7 +74,7 @@ async def worker() -> None:
             # TODO: handle more errors
 
             try:
-                cbtag([path], dryrun=config['manager.test_mode'])
+                tag([path], dryrun=config['manager.test_mode'])
             except NameError as e:
                 logger.error(e)
                 processing_items.remove(path)
@@ -89,14 +97,30 @@ async def worker() -> None:
             await asyncio.sleep(config['manager.processing_interval'] - elapsed)
 
 
-def cbmanager() -> None:
+def rescan() -> requests.Response:
+    return requests.post(f"{API_BASE_URL}/rescan")
+
+
+def flush() -> requests.Response:
+    return requests.post(f"{API_BASE_URL}/flush")
+
+
+def list_items() -> requests.Response:
+    return requests.get(f"{API_BASE_URL}/list")
+
+
+def clear() -> requests.Response:
+    return requests.post(f"{API_BASE_URL}/clear")
+
+
+def manager() -> None:
     logger.info('Starting cbmanager...')
 
     handler = LibraryHandler()
     observer = Observer()
     observer.schedule(handler, path=config['manager.library_path'], recursive=True)
     observer.start()
-    thread = threading.Thread(target=serve, args=(app,), kwargs={'host': '0.0.0.0', 'port': 8080}, daemon=True)
+    thread = threading.Thread(target=serve, args=(app,), kwargs={'host': '0.0.0.0', 'port': config['manager.api_port']}, daemon=True)
     thread.start()
 
     try:
