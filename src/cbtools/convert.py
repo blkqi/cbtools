@@ -9,10 +9,9 @@ logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
 def convert(path, **kwds):
-    opts = SimpleNamespace(
+    kcc.options = SimpleNamespace(
         input = [],
         format = 'CBZ',
-        profile = 'KS', # Kindle Scribe
         title = 'defaulttitle',
         author = 'defaultauthor',
         delete = False,
@@ -34,7 +33,7 @@ def convert(path, **kwds):
         batchsplit = 0,
         customwidth = 0,
         customheight = 0,
+        **kwds,
     )
-    kcc.options = copy.replace(opts, **kwds)
     kcc.checkOptions(kcc.options)
     kcc.makeBook(str(path))
