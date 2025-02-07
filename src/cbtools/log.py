@@ -3,9 +3,11 @@ import pathlib
 
 from logging.handlers import TimedRotatingFileHandler
 
-from cbtools.log import logger
 from cbtools.config import config
 
+
+logger = logging.getLogger(__package__)
+logger.addHandler(logging.NullHandler())
 
 def configure_logging() -> logging.Logger:
     handler = logging.StreamHandler()
