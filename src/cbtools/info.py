@@ -1,9 +1,11 @@
 import json
 
+from pathlib import Path
+
 from cbtools.core import ComicArchive, expand_paths
 
 
-def info(files):
+def info(files: list[Path]) -> None:
     files = expand_paths(files)
 
     for path in files:
