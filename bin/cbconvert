@@ -4,7 +4,7 @@ import sys
 import pathlib
 import argparse
 
-from cbtools.log import configure_logging
+from cbtools import configure_logging
 from cbtools.core import expand_paths
 from cbtools.convert import convert
 
