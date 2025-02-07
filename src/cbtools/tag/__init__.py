@@ -6,13 +6,11 @@ import logging
 
 from typing import Optional, List, Dict, Any
 
-import cbtools.tag.extensions
-from cbtools.config import config
+from cbtools.log import logger
 from cbtools.core import ComicInfo, ComicArchive, expand_paths
+from cbtools.config import config
 from cbtools.constants import COMICINFO_XML_NAME
 
-logger = logging.getLogger(__name__)
-logger.addHandler(logging.NullHandler())
 
 class AniListAdapter(requests.adapters.HTTPAdapter):
     def __init__(self, *args: Any, **kwds: Any) -> None:
