@@ -6,7 +6,7 @@ import argparse
 import logging
 
 from cbtools import configure_logging
-from cbtools.tag import AniList, cbtag
+from cbtools.tag import AniList, tag
 
 PROG_NAME = 'cbtag'
 logger = configure_logging()
@@ -24,7 +24,7 @@ def main():
     args = parse_args()
 
     try:
-        cbtag(**args)
+        tag(**args)
     except KeyboardInterrupt:
         return 1
 

@@ -138,7 +138,7 @@ def _write_series_id(path: 'Path', series_id: int) -> None:
     with open(series_id_file_path, 'w') as file:
         file.write(str(series_id))
 
-def cbtag(files: List[str], series_id: Optional[int] = None, dryrun: bool = False) -> None:
+def tag(files: List[str], series_id: Optional[int] = None, dryrun: bool = False) -> None:
     paths = expand_paths(files)
     cinfo = None
 

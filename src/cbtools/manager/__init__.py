@@ -13,7 +13,7 @@ from cbtools.config import config
 from cbtools.core import ComicArchive, expand_paths
 from cbtools.manager.api import app
 from cbtools.manager.queue import manager_queue
-from cbtools.tag import AniList, cbtag
+from cbtools.tag import AniList, tag
 from cbtools.rename import rename
 
 
@@ -69,7 +69,7 @@ async def worker() -> None:
             # TODO: handle more errors
 
             try:
-                cbtag([path], dryrun=config['manager.test_mode'])
+                tag([path], dryrun=config['manager.test_mode'])
             except NameError as e:
                 logger.error(e)
                 processing_items.remove(path)
