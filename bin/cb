@@ -32,7 +32,7 @@ def parse_args(argv=sys.argv):
     parser_rename.add_argument('--debug', action='store_true')
 
     parser_tag = subparsers.add_parser('tag')
-    parser_tag.add_argument('files', nargs='*', type=Path)
+    parser_tag.add_argument('files', nargs='+', type=Path)
     parser_tag.add_argument('--anilist', dest='series_id', type=int)
     parser_tag.add_argument('--dryrun', action='store_true')
 
