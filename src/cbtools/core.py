@@ -71,10 +71,10 @@ class ComicArchive(object):
     }
 
     def __init__(self, filepath: Path, filetype: str = None) -> None:
-        self.filepath = filepath
-        self.volume: Optional[str] = str(float(self._parse_volume())).removesuffix('.0')
+        self.filepath: Path = filepath
         self._type = filetype or self._file_type()
         self._args = ['-y', f'-t{self._type}']
+        self.volume: Optional[str] = str(float(self._parse_volume())).removesuffix('.0')
 
     def _file_type(self):
         ext = self.filepath.suffix.lower().strip('.')
@@ -94,6 +94,11 @@ class ComicArchive(object):
         for part in filename_parts:
             if match := re.search(r'(\d+)', part):
                 return match.group(1)
+
+        matching_vols = len([x for x in self.filepath.parent.iterdir() if x.suffix == self.filepath.suffix])
+
+        if matching_vols == 1:
+            return '1'
 
         # TODO: raise error
         return 0
