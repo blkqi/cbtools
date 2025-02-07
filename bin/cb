@@ -10,7 +10,7 @@ from pathlib import Path
 from cbtools import configure_logging
 from cbtools.core import ComicArchive, expand_paths
 from cbtools.info import info
-from cbtools.manager import manager
+from cbtools.manager import manager, flush, rescan, clear, list_items
 from cbtools.rename import rename
 from cbtools.tag import tag
 
@@ -40,6 +40,10 @@ def parse_args(argv=sys.argv):
     subparsers_manager = parser_manager.add_subparsers(dest='manager_command')
 
     parser_manager_run = subparsers_manager.add_parser('run')
+    parser_manager_run = subparsers_manager.add_parser('flush')
+    parser_manager_run = subparsers_manager.add_parser('clear')
+    parser_manager_run = subparsers_manager.add_parser('rescan')
+    parser_manager_run = subparsers_manager.add_parser('list')
 
     args = parser.parse_args(argv[1:])
 
@@ -68,6 +72,14 @@ def main():
         if args.command == 'manager':
             if args.manager_command == 'run':
                 manager()
+            elif args.manager_command == 'flush':
+                flush()
+            elif args.manager_command == 'clear':
+                clear()
+            elif args.manager_command == 'rescan':
+                rescan()
+            elif args.manager_command == 'list':
+                print(list_items().json())
             else:
                 logger.error('Invalid manager command: %s', args.manager_command)
                 return 1
