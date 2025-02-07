@@ -90,7 +90,7 @@ def main():
         elif args.command == 'rename':
             rename(**get_args_dict(args))
         else:
-            logger.error('Invalid manager command: %s', args.manager_command)
+            logger.error('Invalid cb command: %s', args.manager_command)
             return 1
     except KeyboardInterrupt:
         return 1
