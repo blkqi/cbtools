@@ -10,6 +10,7 @@ from pathlib import Path
 from cbtools import configure_logging
 from cbtools.core import ComicArchive, expand_paths
 from cbtools.info import info
+from cbtools.manager import manager
 from cbtools.rename import rename
 from cbtools.tag import tag
 
@@ -35,6 +36,11 @@ def parse_args(argv=sys.argv):
     parser_tag.add_argument('--anilist', dest='series_id', type=int)
     parser_tag.add_argument('--dryrun', action='store_true')
 
+    parser_manager = subparsers.add_parser('manager')
+    subparsers_manager = parser_manager.add_subparsers(dest='manager_command')
+
+    parser_manager_run = subparsers_manager.add_parser('run')
+
     args = parser.parse_args(argv[1:])
 
     return args
@@ -49,27 +55,32 @@ def get_args_dict(args):
     if hasattr(args, 'command'):
         delattr(args, 'command')
 
+    if hasattr(args, 'manager_command'):
+        delattr(args, 'manager_command')
+
     return vars(args)
 
 
 def main():
     args = parse_args()
 
-    commands = {
-        'info': info,
-        'tag': tag,
-        'rename': rename,
-    }
-
-    for command in commands:
-        if args.command == command:
-            try:
-                commands[command](**get_args_dict(args))
-                break
-            except KeyboardInterrupt:
+    try:
+        if args.command == 'manager':
+            if args.manager_command == 'run':
+                manager()
+            else:
+                logger.error('Invalid manager command: %s', args.manager_command)
                 return 1
-    else:
-        logger.error('Invalid command: %s', args.command)
+        elif args.command == 'info':
+            info(**get_args_dict(args))
+        elif args.command == 'tag':
+            tag(**get_args_dict(args))
+        elif args.command == 'rename':
+            rename(**get_args_dict(args))
+        else:
+            logger.error('Invalid manager command: %s', args.manager_command)
+            return 1
+    except KeyboardInterrupt:
         return 1
 
     return 0

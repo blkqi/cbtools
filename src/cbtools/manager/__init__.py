@@ -92,7 +92,7 @@ async def worker() -> None:
             await asyncio.sleep(config['manager.processing_interval'] - elapsed)
 
 
-def cbmanager() -> None:
+def manager() -> None:
     logger.info('Starting cbmanager...')
 
     handler = LibraryHandler()
