@@ -10,7 +10,7 @@ import itertools
 import subprocess
 import logging
 
-from cbtools.log import configure_logging
+from cbtools import configure_logging
 from cbtools.core import ComicArchive, ComicInfo, expand_paths
 from cbtools.constants import COMICINFO_XML_NAME
 
