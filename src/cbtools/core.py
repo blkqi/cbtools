@@ -15,7 +15,7 @@ from pathlib import Path
 from operator import itemgetter
 from typing import Any, Dict, Generator, List, Optional, Tuple, Union, BinaryIO
 
-from cbtools.core.constants import COMICINFO_XML_NAME, COMICINFO_XSD_NAME
+from cbtools.constants import COMICINFO_XML_NAME, COMICINFO_XSD_NAME
 
 
 class ComicInfo(dict):

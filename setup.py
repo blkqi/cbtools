@@ -2,10 +2,9 @@ from setuptools import setup
 
 packages=[
     'cbtools',
-    'cbtools.core',
-    'cbtools.manager',
     'cbtools.tag',
-    'cbtools.tag.extensions'
+    'cbtools.tag.extensions',
+    'cbtools.manager',
 ]
 
 setup(name='cbtools',

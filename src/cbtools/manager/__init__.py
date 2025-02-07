@@ -9,19 +9,16 @@ from waitress import serve
 from watchdog.observers import Observer
 from watchdog.events import PatternMatchingEventHandler, FileSystemEvent
 
-from cbtools.config import config
+from cbtools.log import logger
 from cbtools.core import ComicArchive, expand_paths
-from cbtools.manager.api import app
-from cbtools.manager.queue import manager_queue
+from cbtools.config import config
 from cbtools.tag import AniList, cbtag
 from cbtools.rename import rename
+from cbtools.manager.api import app
+from cbtools.manager.queue import manager_queue
 
-
-logger = logging.getLogger(__name__)
-logger.addHandler(logging.NullHandler())
 
 processing_items: Set[pathlib.Path] = set()
-
 
 class LibraryHandler(PatternMatchingEventHandler):
     def __init__(self):
