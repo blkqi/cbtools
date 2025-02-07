@@ -20,7 +20,6 @@ from cbtools.rename import rename
 
 API_BASE_URL = f"http://localhost:{config['manager.api_port']}"
 
-
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
