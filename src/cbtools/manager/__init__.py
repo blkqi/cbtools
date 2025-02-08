@@ -110,7 +110,7 @@ def rescan(files: List[Path] = None) -> requests.Response:
 
         body = {'paths': list(directories)}
 
-    requests.post(f"{API_BASE_URL}/rescan", json=body)
+    return requests.post(f"{API_BASE_URL}/rescan", json=body)
 
 
 def flush() -> requests.Response:
