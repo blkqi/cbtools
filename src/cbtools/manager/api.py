@@ -16,11 +16,12 @@ def rescan():
     library = pathlib.Path(config['manager.library_path'])
     body = request.get_json(force=True, silent=True) or {}
 
-    if body.get('path'):
-        path = pathlib.Path(config['manager.library_path']) / body['path']
+    if body.get('paths'):
+        for path in body['paths']:
+            path = pathlib.Path(config['manager.library_path']) / path
 
-        if path.exists():
-            manager_queue.enqueue(path)
+            if path.exists():
+                manager_queue.enqueue(path)
     else:
         for path in library.iterdir():
             if path.is_dir():

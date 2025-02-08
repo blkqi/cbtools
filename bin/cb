@@ -40,10 +40,11 @@ def parse_args(argv=sys.argv):
     subparsers_manager = parser_manager.add_subparsers(dest='manager_command')
 
     parser_manager_run = subparsers_manager.add_parser('run')
-    parser_manager_run = subparsers_manager.add_parser('flush')
-    parser_manager_run = subparsers_manager.add_parser('clear')
-    parser_manager_run = subparsers_manager.add_parser('rescan')
-    parser_manager_run = subparsers_manager.add_parser('list')
+    parser_manager_flush = subparsers_manager.add_parser('flush')
+    parser_manager_clear = subparsers_manager.add_parser('clear')
+    parser_manager_rescan = subparsers_manager.add_parser('rescan')
+    parser_manager_rescan.add_argument('files', nargs='*', type=Path, default=None)
+    parser_manager_list = subparsers_manager.add_parser('list')
 
     args = parser.parse_args(argv[1:])
 
@@ -77,7 +78,7 @@ def main():
             elif args.manager_command == 'clear':
                 clear()
             elif args.manager_command == 'rescan':
-                rescan()
+                rescan(**get_args_dict(args))
             elif args.manager_command == 'list':
                 print(list_items().json())
             else:

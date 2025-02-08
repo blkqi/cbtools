@@ -2,6 +2,7 @@ import time
 
 from typing import Any, List, Optional
 
+
 class ManagerQueueItem:
     def __init__(self, item: Any) -> None:
         self.item = item
