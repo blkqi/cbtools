@@ -33,6 +33,8 @@ def convert(path, **kwds):
         batchsplit = 0,
         customwidth = 0,
         customheight = 0,
+        righttoleft = False,
+        norotate = False,
         **kwds,
     )
     kcc.checkOptions(kcc.options)
