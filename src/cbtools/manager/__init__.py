@@ -1,11 +1,11 @@
 import asyncio
 import logging
-import pathlib
 import requests
 import time
 import threading
 
-from typing import Set
+from pathlib import Path
+from typing import Set, List
 from waitress import serve
 from watchdog.observers import Observer
 from watchdog.events import PatternMatchingEventHandler, FileSystemEvent
@@ -26,7 +26,7 @@ API_BASE_URL = f"http://localhost:{config['manager.api_port']}"
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
-processing_items: Set[pathlib.Path] = set()
+processing_items: Set[Path] = set()
 
 class LibraryHandler(PatternMatchingEventHandler):
     def __init__(self):
@@ -35,7 +35,7 @@ class LibraryHandler(PatternMatchingEventHandler):
         super().__init__(patterns=patterns, ignore_patterns=[], ignore_directories=True, case_sensitive=False)
 
     def on_created(self, event: FileSystemEvent) -> None:
-        path = pathlib.Path(event.src_path)
+        path = Path(event.src_path)
 
         if path.parent in processing_items:
             return
@@ -44,16 +44,16 @@ class LibraryHandler(PatternMatchingEventHandler):
         self._handle_series_id_file(path)
 
     def on_modified(self, event: FileSystemEvent) -> None:
-        path = pathlib.Path(event.src_path)
+        path = Path(event.src_path)
 
         self._handle_series_id_file(path)
 
-    def _handle_comic_archive(self, path: pathlib.Path) -> None:
+    def _handle_comic_archive(self, path: Path) -> None:
         if path.suffix.strip('.').lower() in ComicArchive._allowed_file_exts.keys():
             logger.debug(f'CBZ file {path.name} updated in {path.parent}')
             manager_queue.enqueue(path.parent)
 
-    def _handle_series_id_file(self, path: pathlib.Path) -> None:
+    def _handle_series_id_file(self, path: Path) -> None:
         if path.name == config['tag.series_id_filename'] and path.parent not in processing_items:
             logger.debug(f"{config['tag.series_id_filename']} update in {path.parent}")
             manager_queue.enqueue(path.parent)
@@ -97,8 +97,20 @@ async def worker() -> None:
             await asyncio.sleep(config['manager.processing_interval'] - elapsed)
 
 
-def rescan() -> requests.Response:
-    return requests.post(f"{API_BASE_URL}/rescan")
+def rescan(files: List[Path] = None) -> requests.Response:
+    body = {}
+
+    if files:
+        paths = expand_paths(files)
+        directories = {str(path.parent.resolve()) for path in paths}
+
+        if not directories:
+            logger.warning('No valid directories found in paths')
+            return
+
+        body = {'paths': list(directories)}
+
+    requests.post(f"{API_BASE_URL}/rescan", json=body)
 
 
 def flush() -> requests.Response:
