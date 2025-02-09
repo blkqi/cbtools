@@ -45,7 +45,7 @@ def _process_image(path, target, size, gamma, gain, **kwds):
     color = _image_pad_color(image)
     image = ImageOps.pad(image, size, method=Image.Resampling.BICUBIC, color='black')
 
-    # contrast
+    # gamma correction
     assert(len(image.getbands()) == 1)
     image = image.point(_image_gamma_table(gamma, gain))
     image = ImageOps.autocontrast(image)
