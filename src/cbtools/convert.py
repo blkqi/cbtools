@@ -25,6 +25,7 @@ def _image_pad_color(image):
 
 
 def _image_gamma_table(gamma, gain):
+    assert(len(image.getbands()) == 1)
     return [min(255, int((x / 255.) ** (1. / gamma) * gain * 255.)) for x in range(256)]
 
 
@@ -116,7 +117,7 @@ def _output_filename(path, root=None):
 def convert(files, root, **kwds):
     opts = {
         'size': (1860, 2480),
-        'gamma' : 1.8,
+        'gamma' : 0.555,
         'gain' : 1.0,
         'format': 'JPEG',
         'quality': 85,
