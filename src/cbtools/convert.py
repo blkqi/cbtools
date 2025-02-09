@@ -35,7 +35,7 @@ def _process_image(path, target, size, gamma, gain, **kwds):
     image = image.convert('L')
 
     # assume image is already upscaled
-    assert((image.size[i] >= size[i]) for i in range(2))
+    assert(all(image.size[i] >= size[i]) for i in range(2))
 
     # rotate spreads
     if _image_is_spread(image):
