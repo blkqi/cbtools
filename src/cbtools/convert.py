@@ -19,38 +19,50 @@ def _image_is_spread(image):
     return False
 
 
-def _image_pad_color(image):
+def _image_padding_color(image):
     # TODO Determine fill color from image histogram
-    return 'white'
+    return 'black'
+
+
+def _image_padding_method(image, size):
+    # Use LANCZOS if image is smaller than device
+    if not any((p >= q) for (p, q) in zip(image.size, size)):
+        return Image.Resampling.LANCZOS
+    return Image.Resampling.BICUBIC
 
 
 def _image_gamma_table(gamma, gain):
     return [min(255, int((x / 255.) ** (1. / gamma) * gain * 255.)) for x in range(256)]
 
 
-def _process_image(path, target, size, gamma, gain, **kwds):
-    image = Image.open(path)
+def _process_image_bands(image):
+    return image.convert('L')
 
-    # grayscale
-    image = image.convert('L')
 
-    # assume image is already upscaled
-    assert(all(image.size[i] >= size[i]) for i in range(2))
-
-    # rotate spreads
+def _process_image_rotate(image):
     if _image_is_spread(image):
-        image = image.rotate(90, resample=Image.Resampling.BICUBIC, expand=True)
+        return image.rotate(90, resample=Image.Resampling.BICUBIC, expand=True)
+    return image
 
-    # gamma correction
+
+def _process_image_gamma(image, gamma=1.0, gain=1.0):
+    assert(image.mode == 'L')
     assert(len(image.getbands()) == 1)
-    image = image.point(_image_gamma_table(gamma, gain))
-    image = ImageOps.autocontrast(image)
+    return ImageOps.autocontrast(image.point(_image_gamma_table(gamma, gain)))
 
-    # resize
-    color = _image_pad_color(image)
-    image = ImageOps.pad(image, size, method=Image.Resampling.BICUBIC, color='black')
 
-    # Save
+def _process_image_pad(image, size):
+    method = _image_padding_method(image, size)
+    color = _image_padding_color(image)
+    return ImageOps.pad(image, size, method=method, color=color)
+
+
+def _process_image(path, target, **kwds):
+    image = Image.open(path)
+    image = _process_image_bands(image)
+    image = _process_image_rotate(image)
+    image = _process_image_gamma(image, kwds['gamma'])
+    image = _process_image_pad(image, kwds['size'])
     image.save(target, kwds['format'], optimize=1, quality=kwds['quality'])
 
 
@@ -118,10 +130,11 @@ def convert(files, root, **kwds):
     opts = {
         'size': (1860, 2480),
         'gamma' : 1/1.8,
-        'gain' : 1.0,
         'format': 'JPEG',
         'quality': 85,
     }
+
+    # TODO upscale images
 
     for path in expand_paths(files):
         with (tempfile.TemporaryDirectory() as src_dir,
