@@ -5,18 +5,54 @@ import itertools
 from pathlib import Path
 from cbtools import image
 from cbtools.log import logger
-from cbtools.core import ComicArchive, ComicInfo
+from cbtools.core import ComicArchive, ComicInfo, expand_paths
 from cbtools.constants import *
 
 
-def _write_output(outpath, srcpath, dstpath):
-    logger.info(f'Packing archive "{outpath}"')
+def _convert_images(src_path, dst_path, profile, flags):
+    for path in sorted(src_path.iterdir()):
+        target = (dst_path / path.name)
+        try:
+            image.convertImage(path, target, profile, flags)
+        except RuntimeError as e:
+            # TODO skip non-images specifically
+            logger.warning(str(e))
+            pass
+        # TODO auto contrast ?
 
-    cfile = ComicArchive(outpath)
 
-    add_paths = sorted(dstpath.iterdir())
-    info_path = srcpath / COMICINFO_XML_NAME
+# TODO move create / extract functionality to core
 
+def _flatten_name(name):
+    return Path(name).as_posix().replace('/', '__')
+
+
+def _extract_all(cbx_path, src_path, flat=False):
+    logger.info(f'Unpacking archive "{cbx_path}"')
+
+    cfile = ComicArchive(cbx_path)
+
+    for member in cfile.list():
+        if flat:
+            if member.is_dir():
+                continue
+
+            path = (src_path / _flatten_name(member.name))
+        else:
+            path = (src_path / member.name)
+
+        with open(path, 'wb') as f:
+            cfile.extract(member.name, f)
+
+
+def _create_archive(out_path, src_path, dst_path):
+    logger.info(f'Packing archive "{out_path}"')
+
+    cfile = ComicArchive(out_path)
+
+    add_paths = sorted(dst_path.iterdir())
+
+    info_path = (src_path / COMICINFO_XML_NAME)
     if info_path.exists():
         add_paths = itertools.chain([info_path], add_paths)
 
@@ -24,32 +60,7 @@ def _write_output(outpath, srcpath, dstpath):
         with open(path, 'rb') as f:
             cfile.add(path.name, f)
 
-    logger.info(f'Created archive "{outpath}"')
-
-
-def _convert_images(srcpath, dstpath, profile, flags):
-    for path in sorted(srcpath.iterdir()):
-        target = (dstpath / path.name)
-        try:
-            image.convertImage(str(path), str(target), 'Kindle Scribe', flags)
-        except RuntimeError as e:
-            logger.warning(f'Cannot read image file {path}')
-            pass
-        # TODO auto contrast ?
-
-
-def _extract_flatten(cfile, root):
-    logger.info(f'Unpacking archive "{cfile.filepath}"')
-
-    for member in cfile.list():
-        if member.is_dir():
-            continue
-
-        name = Path(member.name).as_posix().replace('/', '__')
-        path = (root / name)
-
-        with open(path, 'wb') as f:
-            cfile.extract(member.name, f)
+    logger.info(f'Created archive "{out_path}"')
 
 
 _output_suffix = 'cbconvert'
@@ -59,28 +70,28 @@ def _output_filename(path, root=None):
     return ((root or path.parent) / (str(stem) + '.cbz'))
 
 
-def convert(path, **kwds):
-    cfile = ComicArchive(path)
-
-    ## image processing options
+def convert(files, root, profile, **kwds):
     flags = 0
     flags |= image.ImageFlags.Resize
     #flags |= image.ImageFlags.Fill
     #flags |= image.ImageFlags.Quantize
 
-    ## device profile
-    profile = 'Kindle Scribe'
+    opts = {
+        'profile': profile,
+        'flags': flags,
+    }
 
-    with tempfile.TemporaryDirectory() as srcdir, \
-            tempfile.TemporaryDirectory() as dstdir:
+    for path in expand_paths(files):
+        with (tempfile.TemporaryDirectory() as src_dir,
+              tempfile.TemporaryDirectory() as dst_dir):
 
-        src_path = Path(srcdir)
-        dst_path = Path(dstdir)
-        out_path = _output_filename(cfile.filepath, root=path.parent)
+            src_path = Path(src_dir)
+            dst_path = Path(dst_dir)
 
-        if out_path.exists():
-            raise RuntimeError(f'path "{out_path}" already exists!')
+            out_path = _output_filename(path, root=root)
+            if out_path.exists():
+                raise RuntimeError(f'path "{out_path}" already exists!')
 
-        _extract_flatten(cfile, src_path)
-        _convert_images(srcpath, dst_path, profile, flags)
-        _write_output(out_path, src_path, dst_path)
+            _extract_all(path, src_path, flat=True)
+            _convert_images(src_path, dst_path, **opts)
+            _create_archive(out_path, src_path, dst_path)

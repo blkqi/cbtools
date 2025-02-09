@@ -5,7 +5,6 @@ import pathlib
 import argparse
 
 from cbtools import configure_logging
-from cbtools.core import expand_paths
 from cbtools.convert import convert
 
 
@@ -13,19 +12,12 @@ _program_name = 'cbconvert'
 _logger = configure_logging()
 
 
-def cbconvert(files, root, **kwds):
-    paths = expand_paths(files)
-    for path in paths:
-        convert(path, output=root, **kwds)
-
-
 def parse_args(argv=sys.argv):
     parser = argparse.ArgumentParser(prog=_program_name)
     parser.add_argument('files', nargs='+', type=pathlib.Path)
-    parser.add_argument('--path', dest='root', type=str)
-    parser.add_argument('--profile', default='KS')
+    parser.add_argument('--path', dest='root', type=pathlib.Path)
+    parser.add_argument('--profile', default='Kindle Scribe')
     args = parser.parse_args(argv[1:])
-
     return vars(args)
 
 
@@ -33,7 +25,7 @@ def main():
     args = parse_args()
 
     try:
-        cbconvert(**args)
+        convert(**args)
     except KeyboardInterrupt:
         return 1
 
