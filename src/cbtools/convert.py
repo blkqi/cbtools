@@ -25,7 +25,6 @@ def _image_pad_color(image):
 
 
 def _image_gamma_table(gamma, gain):
-    assert(len(image.getbands()) == 1)
     return [min(255, int((x / 255.) ** (1. / gamma) * gain * 255.)) for x in range(256)]
 
 
@@ -47,6 +46,7 @@ def _process_image(path, target, size, gamma, gain, **kwds):
     image = ImageOps.pad(image, size, method=Image.Resampling.BICUBIC, color='black')
 
     # contrast
+    assert(len(image.getbands()) == 1)
     image = image.point(_image_gamma_table(gamma, gain))
     image = ImageOps.autocontrast(image)
 
