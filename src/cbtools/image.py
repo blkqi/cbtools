@@ -107,9 +107,9 @@ def protect_bad_image(func):
             return args[0]
 
     return func_wrapper
-    
 
-@protect_bad_image    
+
+@protect_bad_image
 def splitLeft(image):
     widthImg, heightImg = image.size
 
@@ -136,7 +136,7 @@ def quantizeImage(image, palette):
 
 
 @protect_bad_image
-def fitImage(image, size, method=Image.ANTIALIAS):
+def fitImage(image, size, method=Image.LANCZOS):
     # copied from ImageOps.contain() from the Python3 version of Pillow
     # with division related modifications for Python2
 
@@ -159,20 +159,20 @@ def fitImage(image, size, method=Image.ANTIALIAS):
 def fillImage(image, size):
     widthDev, heightDev = size
     widthImg, heightImg = image.size
-    
+
     imgRatio = float(widthImg) / float(heightImg)
     devRatio = float(widthDev) / float(heightDev)
 
     # don't crop 2 page spreads.
     if imgRatio > devRatio:
         return resizeImage(image, size)
-    
-    return ImageOps.fit(image, size, Image.ANTIALIAS)
+
+    return ImageOps.fit(image, size, Image.LANCZOS)
 
 
 @protect_bad_image
 def stretchImage(image, size):
-    return image.resize(size, Image.ANTIALIAS)
+    return image.resize(size, Image.LANCZOS)
 
 
 @protect_bad_image
@@ -196,7 +196,7 @@ def resizeImage(image, size):
     else:
         widthImg, heightImg = size
 
-    return image.resize((widthImg, heightImg), Image.ANTIALIAS)
+    return image.resize((widthImg, heightImg), Image.LANCZOS)
 
 
 @protect_bad_image
@@ -266,7 +266,7 @@ def loadImage(source):
         return Image.open(source)
     except IOError:
         raise RuntimeError('Cannot read image file %s' % source)
-    
+
 
 def saveImage(image, target):
     try:
@@ -283,7 +283,7 @@ def isSplitable(source):
     try:
         widthImg, heightImg = image.size
         return  widthImg > heightImg
-    except IOError: 
+    except IOError:
         raise RuntimeError('Cannot read image file %s' % source)
 
 
@@ -325,5 +325,5 @@ def convertImage(source, target, device, flags):
         image = frameImage(image, tuple(palette[:3]), tuple(palette[-3:]), size)
     if flags & ImageFlags.Quantize:
         image = quantizeImage(image, palette)
-    
+
     saveImage(image, target)
