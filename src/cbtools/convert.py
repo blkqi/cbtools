@@ -63,7 +63,7 @@ def _process_image(path, target, **kwds):
     image = _process_image_rotate(image)
     image = _process_image_gamma(image, kwds['gamma'])
     image = _process_image_pad(image, kwds['size'])
-    image.save(target, kwds['format'], optimize=1, quality=kwds['quality'])
+    image.save(target, kwds['format'], kwds['optimize'], quality=kwds['quality'])
 
 
 def _convert_images(src_path, dst_path, **kwds):
@@ -132,6 +132,7 @@ def convert(files, root, **kwds):
         'gamma' : 1/1.8,
         'format': 'JPEG',
         'quality': 85,
+        'optimize': 1,
     }
 
     # TODO upscale images
