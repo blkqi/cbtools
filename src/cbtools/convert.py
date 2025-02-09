@@ -41,14 +41,14 @@ def _process_image(path, target, size, gamma, gain, **kwds):
     if _image_is_spread(image):
         image = image.rotate(90, resample=Image.Resampling.BICUBIC, expand=True)
 
-    # resize
-    color = _image_pad_color(image)
-    image = ImageOps.pad(image, size, method=Image.Resampling.BICUBIC, color='black')
-
     # gamma correction
     assert(len(image.getbands()) == 1)
     image = image.point(_image_gamma_table(gamma, gain))
     image = ImageOps.autocontrast(image)
+
+    # resize
+    color = _image_pad_color(image)
+    image = ImageOps.pad(image, size, method=Image.Resampling.BICUBIC, color='black')
 
     # Save
     image.save(target, kwds['format'], optimize=1, quality=kwds['quality'])
@@ -117,7 +117,7 @@ def _output_filename(path, root=None):
 def convert(files, root, **kwds):
     opts = {
         'size': (1860, 2480),
-        'gamma' : 0.555,
+        'gamma' : 1/1.8,
         'gain' : 1.0,
         'format': 'JPEG',
         'quality': 85,
