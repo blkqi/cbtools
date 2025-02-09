@@ -3,7 +3,6 @@ import tempfile
 import itertools
 
 from pathlib import Path
-#from cbtools import image
 from cbtools.log import logger
 from cbtools.core import ComicArchive, ComicInfo, expand_paths
 from cbtools.constants import *
@@ -78,6 +77,7 @@ def _convert_images(src_path, dst_path, **kwds):
 # TODO move create / extract functionality to core
 
 def _flatten_name(name):
+    # TODO just rename the file completely with enumeration
     return Path(name).as_posix().replace('/', '__')
 
 
