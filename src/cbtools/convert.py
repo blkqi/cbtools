@@ -3,22 +3,65 @@ import tempfile
 import itertools
 
 from pathlib import Path
-from cbtools import image
+#from cbtools import image
 from cbtools.log import logger
 from cbtools.core import ComicArchive, ComicInfo, expand_paths
 from cbtools.constants import *
 
 
-def _convert_images(src_path, dst_path, profile, flags):
+# TODO move image functions to image module
+
+from PIL import Image, ImageOps, UnidentifiedImageError
+
+
+def _image_is_spread(image):
+    # TODO
+    return False
+
+
+def _image_pad_color(image):
+    # TODO Determine fill color from image histogram
+    return 'white'
+
+
+def _image_gamma_table(gamma, gain):
+    return [min(255, int((x / 255.) ** (1. / gamma) * gain * 255.)) for x in range(256)]
+
+
+def _process_image(path, target, size, gamma, gain, **kwds):
+    image = Image.open(path)
+
+    # grayscale
+    image = image.convert('L')
+
+    # assume image is already upscaled
+    assert((image.size[i] >= size[i]) for i in range(2))
+
+    # rotate spreads
+    if _image_is_spread(image):
+        image = image.rotate(90, resample=Image.Resampling.BICUBIC, expand=True)
+
+    # resize
+    color = _image_pad_color(image)
+    image = ImageOps.pad(image, size, method=Image.Resampling.BICUBIC, color='black')
+
+    # contrast
+    image = image.point(_image_gamma_table(gamma, gain))
+    image = ImageOps.autocontrast(image)
+
+    # Save
+    image.save(target, kwds['format'], optimize=1, quality=kwds['quality'])
+
+
+def _convert_images(src_path, dst_path, **kwds):
     for path in sorted(src_path.iterdir()):
         target = (dst_path / path.name)
         try:
-            image.convertImage(path, target, profile, flags)
-        except RuntimeError as e:
-            # TODO skip non-images specifically
+            _process_image(path, target, **kwds)
+        except UnidentifiedImageError as e:
+            # skip non-images
             logger.warning(str(e))
             pass
-        # TODO auto contrast ?
 
 
 # TODO move create / extract functionality to core
@@ -70,15 +113,13 @@ def _output_filename(path, root=None):
     return ((root or path.parent) / (str(stem) + '.cbz'))
 
 
-def convert(files, root, profile, **kwds):
-    flags = 0
-    flags |= image.ImageFlags.Resize
-    #flags |= image.ImageFlags.Fill
-    #flags |= image.ImageFlags.Quantize
-
+def convert(files, root, **kwds):
     opts = {
-        'profile': profile,
-        'flags': flags,
+        'size': (1860, 2480),
+        'gamma' : 1.8,
+        'gain' : 1.0,
+        'format': 'JPEG',
+        'quality': 85,
     }
 
     for path in expand_paths(files):
