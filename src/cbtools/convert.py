@@ -15,8 +15,7 @@ from PIL import Image, ImageOps, UnidentifiedImageError
 
 
 def _image_is_spread(image):
-    # TODO
-    return False
+    return image.size[0] > image.size[1]
 
 
 def _image_padding_color(image):
@@ -25,7 +24,6 @@ def _image_padding_color(image):
 
 
 def _image_padding_method(image, size):
-    # Use LANCZOS if image is smaller than device
     if not any((p >= q) for (p, q) in zip(image.size, size)):
         return Image.Resampling.LANCZOS
     return Image.Resampling.BICUBIC
@@ -63,7 +61,7 @@ def _process_image(path, target, **kwds):
     image = _process_image_rotate(image)
     image = _process_image_gamma(image, kwds['gamma'])
     image = _process_image_pad(image, kwds['size'])
-    image.save(target, kwds['format'], kwds['optimize'], quality=kwds['quality'])
+    image.save(target, kwds['format'], optimize=kwds['optimize'], quality=kwds['quality'])
 
 
 def _convert_images(src_path, dst_path, **kwds):
