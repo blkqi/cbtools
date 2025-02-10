@@ -54,30 +54,41 @@ def _process_image_pad(image, size):
     return ImageOps.pad(image, size, method=method, color=color)
 
 
-def _process_image(src_img, dst_img, **kwds):
-    image = Image.open(src_img)
+import multiprocessing
+from io import BytesIO
+from functools import partial
+
+def _process_image(obj, **kwds):
+    name, buffer = obj
+    image = Image.open(buffer)
     image = _process_image_bands(image)
     image = _process_image_rotate(image)
     image = _process_image_gamma(image, kwds['gamma'])
     image = _process_image_pad(image, kwds['size'])
-    image.save(dst_img, kwds['format'], optimize=kwds['optimize'], quality=kwds['quality'])
+    buffer = BytesIO()
+    image.save(buffer, kwds['format'], optimize=kwds['optimize'], quality=kwds['quality'])
+    buffer.seek(0)
+    return name, buffer
 
 
-def _convert_images(src_cfile, dst_cfile, **kwds):
-    for member in src_cfile.list():
+def _image_iter(cfile):
+    for member in cfile.list():
         if any((member.name == COMICINFO_XML_NAME,
                 member.is_dir())):
             continue
 
-        with (src_cfile.open(member.name, 'r') as src_img,
-              dst_cfile.open(member.name, 'w') as dst_img):
+        with cfile.open(member.name, 'r') as image:
+              buffer = BytesIO()
+              buffer.write(image.read())
+              yield (member.name, buffer)
 
-            try:
-                _process_image(src_img, dst_img, **kwds)
-            except UnidentifiedImageError as e:
-                # skip non-images
-                logger.warning(str(e))
-                pass
+
+def _convert_images(src_cfile, dst_cfile, **kwds):
+    pool = multiprocessing.Pool(16)
+    result = pool.imap(partial(_process_image, **kwds), _image_iter(src_cfile))
+    for name, buffer in result:
+        with dst_cfile.open(name, 'w') as f:
+            f.write(buffer.getbuffer())
 
 
 # TODO move create / extract functionality to core
