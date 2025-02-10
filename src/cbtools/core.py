@@ -127,6 +127,9 @@ class ComicArchive(object):
     def write(self, arcname: str, data: bytes) -> None:
         self._add(arcname, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, input=data)
 
+    def create(self, *args):
+        return _subprocess_run(['7z', 'a', self.filepath, *args], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+
     def _list(self, **kwds):
         return _subprocess_run(['7z', 'l', self.filepath, '-ba'], **kwds)
 

@@ -1,6 +1,8 @@
 import typing
 import tempfile
 import itertools
+import functools
+import multiprocessing
 
 from pathlib import Path
 from cbtools.log import logger
@@ -54,24 +56,19 @@ def _process_image_pad(image, size):
     return ImageOps.pad(image, size, method=method, color=color)
 
 
-def _process_image(path, target, **kwds):
+def _process_image(root, path, **kwds):
     image = Image.open(path)
     image = _process_image_bands(image)
     image = _process_image_rotate(image)
     image = _process_image_gamma(image, kwds['gamma'])
     image = _process_image_pad(image, kwds['size'])
-    image.save(target, kwds['format'], optimize=kwds['optimize'], quality=kwds['quality'])
+    image.save((root / path.name), kwds['format'], optimize=kwds['optimize'], quality=kwds['quality'])
 
 
 def _convert_images(src_path, dst_path, **kwds):
-    for path in sorted(src_path.iterdir()):
-        target = (dst_path / path.name)
-        try:
-            _process_image(path, target, **kwds)
-        except UnidentifiedImageError as e:
-            # skip non-images
-            logger.warning(str(e))
-            pass
+    paths = sorted(path for path in src_path.iterdir() if path.name != COMICINFO_XML_NAME)
+    pool = multiprocessing.Pool(16)
+    result = pool.map(functools.partial(_process_image, dst_path, **kwds), paths)
 
 
 # TODO move create / extract functionality to core
@@ -102,17 +99,12 @@ def _extract_all(cbx_path, src_path, flat=False):
 def _create_archive(out_path, src_path, dst_path):
     logger.info(f'Packing archive "{out_path}"')
 
-    cfile = ComicArchive(out_path)
-
-    add_paths = sorted(dst_path.iterdir())
-
+    add_paths = dst_path.iterdir()
     info_path = (src_path / COMICINFO_XML_NAME)
     if info_path.exists():
         add_paths = itertools.chain([info_path], add_paths)
 
-    for path in add_paths:
-        with open(path, 'rb') as f:
-            cfile.add(path.name, f)
+    ComicArchive(out_path).create(*add_paths)
 
     logger.info(f'Created archive "{out_path}"')
 
