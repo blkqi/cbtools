@@ -135,17 +135,19 @@ def convert(files, root, **kwds):
 
     # TODO upscale images
 
-    for path in expand_paths(files):
-        with (tempfile.TemporaryDirectory() as src_dir,
-              tempfile.TemporaryDirectory() as dst_dir):
+    for cbx_path in expand_paths(files):
+        with tempfile.TemporaryDirectory() as tmp_dir:
 
-            src_path = Path(src_dir)
-            dst_path = Path(dst_dir)
+            out_path = _output_filename(cbx_path, root=root)
 
-            out_path = _output_filename(path, root=root)
             if out_path.exists():
-                raise RuntimeError(f'path "{out_path}" already exists!')
+                logger.error(f'{out_path!s}: already exists')
+                return 1
 
-            _extract_all(path, src_path, flat=True)
+            tmp_path = Path(tmp_dir)
+            (src_path := (tmp_path / 'extract')).mkdir()
+            (dst_path := (tmp_path / 'convert')).mkdir()
+
+            _extract_all(cbx_path, src_path, flat=True)
             _convert_images(src_path, dst_path, **opts)
             _create_archive(out_path, src_path, dst_path)
