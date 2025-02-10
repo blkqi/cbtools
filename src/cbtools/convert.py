@@ -6,6 +6,7 @@ from pathlib import Path
 from cbtools import image
 from cbtools.log import logger
 from cbtools.core import ComicArchive, expand_paths
+from cbtools.config import config
 from cbtools.functools import partial, chain
 from cbtools.constants import *
 
@@ -56,7 +57,7 @@ def _output_filename(path, root=None):
 
 
 def _convert_images(src_path, dst_path):
-    pool = multiprocessing.Pool(16)
+    pool = multiprocessing.Pool(config['image.jobs'])
     paths = (p for p in src_path.iterdir() if p.name != COMICINFO_XML_NAME)
     result = pool.map(partial(image.convert, root=dst_path), paths)
 
