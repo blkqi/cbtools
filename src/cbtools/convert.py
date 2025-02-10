@@ -54,24 +54,30 @@ def _process_image_pad(image, size):
     return ImageOps.pad(image, size, method=method, color=color)
 
 
-def _process_image(path, target, **kwds):
-    image = Image.open(path)
+def _process_image(src_img, dst_img, **kwds):
+    image = Image.open(src_img)
     image = _process_image_bands(image)
     image = _process_image_rotate(image)
     image = _process_image_gamma(image, kwds['gamma'])
     image = _process_image_pad(image, kwds['size'])
-    image.save(target, kwds['format'], optimize=kwds['optimize'], quality=kwds['quality'])
+    image.save(dst_img, kwds['format'], optimize=kwds['optimize'], quality=kwds['quality'])
 
 
-def _convert_images(src_path, dst_path, **kwds):
-    for path in sorted(src_path.iterdir()):
-        target = (dst_path / path.name)
-        try:
-            _process_image(path, target, **kwds)
-        except UnidentifiedImageError as e:
-            # skip non-images
-            logger.warning(str(e))
-            pass
+def _convert_images(src_cfile, dst_cfile, **kwds):
+    for member in src_cfile.list():
+        if any((member.name == COMICINFO_XML_NAME,
+                member.is_dir())):
+            continue
+
+        with (src_cfile.open(member.name, 'r') as src_img,
+              dst_cfile.open(member.name, 'w') as dst_img):
+
+            try:
+                _process_image(src_img, dst_img, **kwds)
+            except UnidentifiedImageError as e:
+                # skip non-images
+                logger.warning(str(e))
+                pass
 
 
 # TODO move create / extract functionality to core
@@ -136,18 +142,14 @@ def convert(files, root, **kwds):
     # TODO upscale images
 
     for cbx_path in expand_paths(files):
-        with tempfile.TemporaryDirectory() as tmp_dir:
 
-            out_path = _output_filename(cbx_path, root=root)
+        out_path = _output_filename(cbx_path, root=root)
 
-            if out_path.exists():
-                logger.error(f'{out_path!s}: already exists')
-                return 1
+        if out_path.exists():
+            logger.error(f'{out_path!s}: already exists')
+            return 1
 
-            tmp_path = Path(tmp_dir)
-            (src_path := (tmp_path / 'extract')).mkdir()
-            (dst_path := (tmp_path / 'convert')).mkdir()
+        src_cfile = ComicArchive(cbx_path)
+        dst_cfile = ComicArchive(out_path)
 
-            _extract_all(cbx_path, src_path, flat=True)
-            _convert_images(src_path, dst_path, **opts)
-            _create_archive(out_path, src_path, dst_path)
+        _convert_images(src_cfile, dst_cfile, **opts)

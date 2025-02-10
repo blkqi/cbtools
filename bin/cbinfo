@@ -14,7 +14,6 @@ def parse_args(argv=sys.argv):
     parser = argparse.ArgumentParser(prog=PROG_NAME)
     parser.add_argument('files', nargs='+', type=pathlib.Path)
     args = parser.parse_args(argv[1:])
-
     return vars(args)
 
 def main():

@@ -9,6 +9,7 @@ import subprocess
 import zipfile
 import struct
 import importlib.resources
+import contextlib
 
 from io import BytesIO
 from pathlib import Path
@@ -120,6 +121,29 @@ class ComicArchive(object):
 
     def add(self, arcname: str, f: BinaryIO) -> None:
         self._add(arcname, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, stdin=f)
+
+    @contextlib.contextmanager
+    def open(self, arcname: str, mode: str = 'r'):
+        if mode == 'r':
+            proc = subprocess.Popen(['7z', 'x', self.filepath, arcname, *self._args, '-so'],
+                                    stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+            try:
+                yield proc.stdout
+            finally:
+                proc.stdout.close()
+                proc.wait()
+
+        elif mode == 'w':
+            proc = subprocess.Popen(['7z', 'a', self.filepath, *self._args, f'-si{arcname}'],
+                                    stdin=subprocess.PIPE, stdout=subprocess.DEVNULL)
+            try:
+                yield proc.stdin
+            finally:
+                proc.stdin.close()
+                proc.wait()
+
+        else:
+            raise ValueError('open() requires mode "r" or "w"')
 
     def read(self, arcname: str) -> bytes:
         return self._extract(arcname, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout
