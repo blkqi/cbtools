@@ -22,6 +22,13 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     "tag.series_id_filename": ".anilist.txt",
     "tag.write_series_id_file": False,
     "tag.extensions": [],
+    "image.size": (1860, 2480),
+    "image.gamma" : 1/1.8,
+    "image.gain" : 1,
+    "image.format": "JPEG",
+    "image.quality": 85,
+    "image.optimize": 1,
+    "image.background": "black",
 }
 
 def load_config() -> Dict[str, Any]:
