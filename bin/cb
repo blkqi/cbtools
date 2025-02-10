@@ -1,0 +1,103 @@
+#!/usr/bin/env python
+
+import sys
+import json
+import argparse
+import logging
+
+from pathlib import Path
+
+from cbtools import configure_logging
+from cbtools.core import ComicArchive, expand_paths
+from cbtools.info import info
+from cbtools.manager import manager, flush, rescan, clear, list_items
+from cbtools.rename import rename
+from cbtools.tag import tag
+
+
+logger = configure_logging()
+
+
+def parse_args(argv=sys.argv):
+    parser = argparse.ArgumentParser(prog='cb')
+    subparsers = parser.add_subparsers(dest='command')
+
+    parser_info = subparsers.add_parser('info')
+    parser_info.add_argument('files', nargs='+', type=Path)
+
+    parser_rename = subparsers.add_parser('rename')
+    parser_rename.add_argument('files', nargs='+', type=Path)
+    parser_rename.add_argument('--path', dest='root', type=Path, default=Path(''))
+    parser_rename.add_argument('--dryrun', action='store_true')
+    parser_rename.add_argument('--debug', action='store_true')
+
+    parser_tag = subparsers.add_parser('tag')
+    parser_tag.add_argument('files', nargs='+', type=Path)
+    parser_tag.add_argument('--anilist', dest='series_id', type=int)
+    parser_tag.add_argument('--dryrun', action='store_true')
+
+    parser_manager = subparsers.add_parser('manager')
+    subparsers_manager = parser_manager.add_subparsers(dest='manager_command')
+
+    parser_manager_run = subparsers_manager.add_parser('run')
+    parser_manager_flush = subparsers_manager.add_parser('flush')
+    parser_manager_clear = subparsers_manager.add_parser('clear')
+    parser_manager_rescan = subparsers_manager.add_parser('rescan')
+    parser_manager_rescan.add_argument('files', nargs='*', type=Path, default=None)
+    parser_manager_list = subparsers_manager.add_parser('list')
+
+    args = parser.parse_args(argv[1:])
+
+    return args
+
+
+def get_args_dict(args):
+    if hasattr(args, 'debug'):
+        if args.debug:
+            logger.setLevel(logging.DEBUG)
+        delattr(args, 'debug')
+
+    if hasattr(args, 'command'):
+        delattr(args, 'command')
+
+    if hasattr(args, 'manager_command'):
+        delattr(args, 'manager_command')
+
+    return vars(args)
+
+
+def main():
+    args = parse_args()
+
+    try:
+        if args.command == 'manager':
+            if args.manager_command == 'run':
+                manager()
+            elif args.manager_command == 'flush':
+                flush()
+            elif args.manager_command == 'clear':
+                clear()
+            elif args.manager_command == 'rescan':
+                rescan(**get_args_dict(args))
+            elif args.manager_command == 'list':
+                print(list_items().json())
+            else:
+                logger.error('Invalid manager command: %s', args.manager_command)
+                return 1
+        elif args.command == 'info':
+            info(**get_args_dict(args))
+        elif args.command == 'tag':
+            tag(**get_args_dict(args))
+        elif args.command == 'rename':
+            rename(**get_args_dict(args))
+        else:
+            logger.error('Invalid cb command: %s', args.manager_command)
+            return 1
+    except KeyboardInterrupt:
+        return 1
+
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())

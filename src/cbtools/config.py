@@ -16,6 +16,7 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     "manager.test_mode": False,
     "manager.library_path": "/library",
     "manager.processing_interval": 2,
+    "manager.api_port": 8080,
     "rename.move_includes": [".anilist.txt", "cover.jpg"],
     "rename.pattern": "${Series} (${Year})/${Series} ${Volume}",
     "tag.series_id_filename": ".anilist.txt",
