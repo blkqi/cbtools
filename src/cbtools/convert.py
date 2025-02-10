@@ -1,5 +1,7 @@
+import os
 import typing
 import tempfile
+import subprocess
 import multiprocessing
 
 from pathlib import Path
@@ -9,6 +11,10 @@ from cbtools.core import ComicArchive, expand_paths
 from cbtools.config import config
 from cbtools.functools import partial, chain
 from cbtools.constants import *
+
+
+WAIFU2X_BIN = os.getenv('WAIFU2X_BIN', '/usr/bin/waifu2x-ncnn-vulkan')
+WAIFU2X_MODEL = os.getenv('WAIFU2X_MODEL', '/usr/share/waifu2x-ncnn-vulkan/models-upconv_7_anime_style_art_rgb')
 
 
 # TODO move create / extract functionality to core
@@ -56,14 +62,40 @@ def _output_filename(path, root=None):
     return ((root or path.parent) / (str(stem) + '.cbz'))
 
 
+def _upscale_images(src_path, dst_path, scale, noise, ftype, gpuid):
+    logger.info(f'Upscaling image data')
+
+    cmd = [WAIFU2X_BIN,
+           '-i', str(src_path), '-o', str(dst_path),
+           '-s', str(scale), '-n', str(noise),
+           '-f', str(ftype), '-g', str(gpuid), '-m', WAIFU2X_MODEL]
+
+    try:
+        proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    except FileNotFoundError:
+        raise RuntimeError(f'waifu2x-ncnn-vulkan not found: {entrypoint}')
+
+    if proc.returncode != 0:
+        sys.stderr.write(proc.stdout.decode())
+        raise RuntimeError(f'waifu2x-ncnn-vulkan error code: {proc.returncode}')
+
+
 def _convert_images(src_path, dst_path):
+    logger.info(f'Converting image data')
+
     pool = multiprocessing.Pool(config['image.jobs'])
     paths = (p for p in src_path.iterdir() if p.name != COMICINFO_XML_NAME)
     result = pool.map(partial(image.convert, root=dst_path), paths)
 
 
 def convert(files, root, **kwds):
-    # TODO upscale images
+    # TODO Retrieve from config module
+    opts = {
+        'scale': 2,
+        'noise': 2,
+        'ftype': 'jpg',
+        'gpuid': 'auto',
+    }
 
     for cbx_path in expand_paths(files):
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -75,9 +107,11 @@ def convert(files, root, **kwds):
                 return 1
 
             tmp_path = Path(tmp_dir)
-            (src_path := (tmp_path / 'extract')).mkdir()
-            (dst_path := (tmp_path / 'convert')).mkdir()
+            (ext_path := (tmp_path / 'extract')).mkdir()
+            (ups_path := (tmp_path / 'upscale')).mkdir()
+            (cnv_path := (tmp_path / 'convert')).mkdir()
 
-            _extract_all(cbx_path, src_path, flat=True)
-            _convert_images(src_path, dst_path)
-            _create_archive(out_path, src_path, dst_path)
+            _extract_all(cbx_path, ext_path, flat=True)
+            _upscale_images(ext_path, ups_path, **opts)
+            _convert_images(ups_path, cnv_path)
+            _create_archive(out_path, ext_path, cnv_path)
