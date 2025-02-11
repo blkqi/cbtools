@@ -29,7 +29,7 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     "image.quality": 85,
     "image.optimize": 1,
     "image.background": "black",
-    "image.jobs": 16,
+    "image.convert.jobs": 16,
     "image.upscale.cutoff": 4,
     "image.upscale.factor": 2,
     "image.upscale.noise": 2,
