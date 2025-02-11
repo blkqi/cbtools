@@ -1,11 +1,14 @@
 from cbtools.config import config
 from cbtools.functools import compose
 
-from PIL import Image, ImageOps
+from PIL import Image, ImageOps, UnidentifiedImageError
 
 
 def size(path):
-    return Image.open(path).size
+    try:
+        return Image.open(path).size
+    except UnidentifiedImageError:
+        return None
 
 
 def grayscale(image):
