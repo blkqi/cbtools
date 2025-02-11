@@ -5,8 +5,6 @@ import time
 import logging
 
 from pathlib import Path
-from functools import lru_cache
-from typing import Optional, List, Dict, Any
 
 from cbtools.log import logger
 from cbtools.core import ComicInfo, ComicArchive, expand_paths
@@ -15,10 +13,10 @@ from cbtools.constants import COMICINFO_XML_NAME
 
 
 class AniListAdapter(requests.adapters.HTTPAdapter):
-    def __init__(self, *args: Any, **kwds: Any) -> None:
+    def __init__(self, *args, **kwds):
         super().__init__(*args, **kwds)
 
-    def send(self, request: requests.PreparedRequest, **kwds: Any) -> requests.Response:
+    def send(self, request, **kwds):
         while True:
             response = super().send(request, **kwds)
 
@@ -27,19 +25,19 @@ class AniListAdapter(requests.adapters.HTTPAdapter):
 
         return response
 
-    def _throttle(self, response: requests.Response) -> bool:
+    def _throttle(self, response):
         if response.status_code == 429:
             self._wait(int(response.headers['Retry-After']))
             return True
         else:
             return False
 
-    def _wait(self, period: int) -> None:
+    def _wait(self, period):
         logger.warn(f'AniList rate limit exceeded! Retry in {period} seconds.')
         time.sleep(period)
 
 class AniList:
-    def __init__(self) -> None:
+    def __init__(self):
         self.api_url = 'https://graphql.anilist.co'
 
         adapter = AniListAdapter()
@@ -47,8 +45,7 @@ class AniList:
         self.session.mount('http://', adapter)
         self.session.mount('https://', adapter)
 
-    @lru_cache(1)
-    def search(self, series_id: int) -> 'AniListResponse':
+    def search(self, series_id):
         media_format = 'MANGA'
         query = importlib.resources.files(__name__).joinpath('anilistid.gql').open().read()
         variables = {
@@ -62,7 +59,7 @@ class AniList:
         return AniListResponse(response.json())
 
 class AniListResponse(dict):
-    ANILIST_COMICINFO_JMESMAP: Dict[str, str] = {
+    ANILIST_COMICINFO_JMESMAP = {
         'Series': 'title.romaji',
         'Count': 'volumes',
         'Writer': 'staff.edges[?role.contains(@, `Story`)].node.name.full | [0]',
@@ -82,10 +79,10 @@ class AniListResponse(dict):
     }
 
     @property
-    def media(self) -> Dict[str, Any]:
+    def media(self):
         return self.get('data', {}).get('Media', {})
 
-    def to_cinfo(self) -> ComicInfo:
+    def to_cinfo(self):
         cinfo = ComicInfo()
         data = self.get('data', {}).get('Media', {})
 
@@ -96,7 +93,7 @@ class AniListResponse(dict):
 
         return cinfo
 
-    def _map_cinfo(self, jmesmap: Dict[str, str], cinfo: Optional[ComicInfo] = None) -> ComicInfo:
+    def _map_cinfo(self, jmesmap, cinfo=None):
         cinfo = cinfo or ComicInfo()
 
         for target_key, source_key in jmesmap.items():
@@ -109,7 +106,7 @@ class AniListResponse(dict):
 
         return cinfo
 
-    def _apply_extensions(self, cinfo: ComicInfo) -> None:
+    def _apply_extensions(self, cinfo):
         for extension in config['tag.extensions']:
             try:
                 module = importlib.import_module(f'cbtools.tag.extensions.{extension}')
@@ -117,7 +114,7 @@ class AniListResponse(dict):
             except ImportError:
                 logger.error(f'Failed to import extension {extension}')
 
-def _get_series_id(path: 'Path') -> Optional[int]:
+def _get_series_id(path):
     if path.is_file():
         path = path.parent
 
@@ -127,7 +124,7 @@ def _get_series_id(path: 'Path') -> Optional[int]:
     except FileNotFoundError:
         return None
 
-def _write_series_id(path: 'Path', series_id: int) -> None:
+def _write_series_id(path, series_id):
     if not config['tag.write_series_id_file']:
         return
 
@@ -139,10 +136,7 @@ def _write_series_id(path: 'Path', series_id: int) -> None:
     with open(series_id_file_path, 'w') as file:
         file.write(str(series_id))
 
-def _fetch_comic_info(client: AniList,
-                      path: Path,
-                      series_id: Optional[int] = None,
-                      dryrun: bool = False) -> ComicInfo:
+def _fetch_comic_info(client, path, series_id=None, dryrun=False):
 
     series_id = series_id or _get_series_id(path)
 
@@ -154,7 +148,7 @@ def _fetch_comic_info(client: AniList,
 
     return client.search(series_id).to_cinfo()
 
-def _tag_comic(path: Path, cinfo: ComicInfo, dryrun: bool = False) -> None:
+def _tag_comic(path, cinfo, dryrun=False):
     cfile = ComicArchive(path)
 
     if cfile.volume:
@@ -172,7 +166,7 @@ def _tag_comic(path: Path, cinfo: ComicInfo, dryrun: bool = False) -> None:
     else:
         cfile.write(COMICINFO_XML_NAME, cinfo.encode())
 
-def tag(files: List[Path], series_id: Optional[int] = None, dryrun: bool = False) -> None:
+def tag(files, series_id=None, dryrun=False):
     client = AniList()
     for path in expand_paths(files):
         cinfo = _fetch_comic_info(client, path, series_id, dryrun)

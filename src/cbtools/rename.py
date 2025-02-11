@@ -8,21 +8,20 @@ from itertools import chain, groupby
 from pathlib import Path
 from operator import itemgetter
 from collections import Counter
-from typing import List, Tuple, Generator, Dict, Any
 
 from cbtools.log import logger
 from cbtools.core import ComicArchive, expand_paths
 from cbtools.config import config
 
 
-def _allowed_chars() -> str:
+def _allowed_chars():
     return string.ascii_letters + string.digits + " _-~.'!@#$%^&()[]{}"
 
-def _sanitize_paths(value: str) -> str:
+def _sanitize_paths(value):
     return ''.join(c for c in value if c in _allowed_chars())
 
-def _formatters() -> Tuple[Tuple[str, callable], ...]:
-    def volume_formatter(volume: str) -> str:
+def _formatters():
+    def volume_formatter(volume):
         i, f = str(volume).split('.') if '.' in volume else (str(volume), None)
         return f'V{int(i):02}' + str(f'.{f}' if f else '')
 
@@ -35,7 +34,7 @@ def _formatters() -> Tuple[Tuple[str, callable], ...]:
 
 _default_missing = ''
 
-def _path_from_cinfo(cinfo: Dict[str, Any], default: str = _default_missing) -> Path:
+def _path_from_cinfo(cinfo, default=_default_missing):
     # prefer localized series to series, if it exists
     cinfo['Series'] = cinfo.get('LocalizedSeries') or cinfo.get('Series')
 
@@ -46,7 +45,7 @@ def _path_from_cinfo(cinfo: Dict[str, Any], default: str = _default_missing) -> 
 
     return Path(strpath.strip() + '.cbz')
 
-def _construct_rename_pairs(paths: List[Path], *, root: Path) -> Generator[Tuple[Path, Path], None, None]:
+def _construct_rename_pairs(paths, *, root):
     for src in paths:
         cinfo = ComicArchive(src).info()
         if cinfo:
@@ -58,13 +57,13 @@ def _construct_rename_pairs(paths: List[Path], *, root: Path) -> Generator[Tuple
         else:
             logger.warning(f'File "{src}" contains no info xml - skipping rename')
 
-def _construct_rename_extra(parents: List[Tuple[Path, Path]]) -> Generator[Tuple[Path, Path], None, None]:
+def _construct_rename_extra(parents):
     for inc in config['rename.move_includes']:
         for src, dst in parents:
             if (src / inc).exists():
                 yield (src / inc, dst / inc)
 
-def _rename_file(src: Path, dst: Path) -> None:
+def _rename_file(src, dst):
     dst.parent.mkdir(parents=True, exist_ok=True)
 
     try:
@@ -90,7 +89,7 @@ def _unique_count(iterable):
 def _not_unique(iterable):
     return (x for x, n in _unique_count(iterable) if n > 1)
 
-def _check_has_errors(pairs: Tuple[Path, Path]) -> bool:
+def _check_has_errors(pairs):
     log_noexist = lambda src: logger.error(f'Source {src} doesn\'t exist!') or src
     log_replace = lambda dst: logger.error(f'Destination {dst} already exists!') or dst
     log_collide = lambda dst: logger.error(f'More than one file would be renamed to {dst}!') or dst
@@ -105,7 +104,7 @@ def _check_has_errors(pairs: Tuple[Path, Path]) -> bool:
 
     return any(list(all_errors))
 
-def rename(files: List[Path], root: Path = Path(''), dryrun: bool = False) -> None:
+def rename(files, root=Path(''), dryrun=False):
     paths = expand_paths(files)
     pairs = set(_construct_rename_pairs(paths, root=root))
 
