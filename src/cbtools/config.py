@@ -3,13 +3,10 @@ import logging
 import os
 import pathlib
 
-from typing import Dict, Any
-
 from cbtools.log import logger
 
-
-CONFIG_FILE_PATH: str = os.getenv('CONFIG_FILE_PATH', os.getcwd() + '/config.json')
-DEFAULT_CONFIG: Dict[str, Any] = {
+CONFIG_FILE_PATH = os.getenv('CONFIG_FILE_PATH', os.getcwd() + '/config.json')
+DEFAULT_CONFIG = {
     "logging.path": str(pathlib.Path(CONFIG_FILE_PATH).parent / 'logs'),
     "logging.level": logging.INFO,
     "logging.format": '%(asctime)s [%(levelname)8s] %(message)s (%(name)s :: %(filename)s:%(lineno)s)',
@@ -24,7 +21,7 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     "tag.extensions": [],
 }
 
-def load_config() -> Dict[str, Any]:
+def load_config():
     config = DEFAULT_CONFIG
 
     try:
@@ -35,4 +32,4 @@ def load_config() -> Dict[str, Any]:
 
     return config
 
-config: Dict[str, Any] = load_config()
+config = load_config()
