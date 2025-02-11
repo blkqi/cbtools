@@ -1,2 +1,2 @@
-COMICINFO_XML_NAME: str = 'ComicInfo.xml'
-COMICINFO_XSD_NAME: str = 'ComicInfo.xsd'
+COMICINFO_XML_NAME = 'ComicInfo.xml'
+COMICINFO_XSD_NAME = 'ComicInfo.xsd'
