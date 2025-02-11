@@ -30,6 +30,11 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     "image.optimize": 1,
     "image.background": "black",
     "image.jobs": 16,
+    "image.upscale.cutoff": 2,
+    "image.upscale.factor": 4,
+    "image.upscale.noise": 2,
+    "image.upscale.format": "jpg",
+    "image.upscale.gpu": "auto",
 }
 
 def load_config() -> Dict[str, Any]:

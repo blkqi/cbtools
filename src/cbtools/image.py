@@ -4,6 +4,10 @@ from cbtools.functools import compose
 from PIL import Image, ImageOps
 
 
+def size(path):
+    return Image.open(path).size
+
+
 def grayscale(image):
     return image.convert('L')
 

@@ -62,13 +62,35 @@ def _output_filename(path, root=None):
     return ((root or path.parent) / (str(stem) + '.cbz'))
 
 
-def _upscale_images(src_path, dst_path, scale, noise, ftype, gpuid):
+def _process_skips(src_path, dst_path):
+    factor = config['image.upscale.factor']
+    cutoff = config['image.upscale.cutoff']
+    devdim = config['image.size']
+
+    for path in src_path.iterdir():
+        if path.name == COMICINFO_XML_NAME:
+            continue
+
+        imgdim = image.size(path)
+
+        if any(((factor * imgdim[i]) > (cutoff * devdim[i])) for i in range(2)):
+            logger.debug(f'skip: image dimension "{path.name}" exceeds cutoff')
+            path.rename(dst_path / path.name)
+
+
+def _upscale_images(src_path, dst_path):
     logger.info(f'Upscaling image data')
 
+    _process_skips(src_path, dst_path)
+
     cmd = [WAIFU2X_BIN,
-           '-i', str(src_path), '-o', str(dst_path),
-           '-s', str(scale), '-n', str(noise),
-           '-f', str(ftype), '-g', str(gpuid), '-m', WAIFU2X_MODEL]
+           '-m', WAIFU2X_MODEL,
+           '-i', str(src_path),
+           '-o', str(dst_path),
+           '-s', str(config['image.upscale.factor']),
+           '-n', str(config['image.upscale.noise']),
+           '-f', str(config['image.upscale.format']),
+           '-g', str(config['image.upscale.gpu'])]
 
     try:
         proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
@@ -89,14 +111,6 @@ def _convert_images(src_path, dst_path):
 
 
 def convert(files, root, **kwds):
-    # TODO Retrieve from config module
-    opts = {
-        'scale': 2,
-        'noise': 2,
-        'ftype': 'jpg',
-        'gpuid': 'auto',
-    }
-
     for cbx_path in expand_paths(files):
         with tempfile.TemporaryDirectory() as tmp_dir:
 
@@ -112,6 +126,6 @@ def convert(files, root, **kwds):
             (cnv_path := (tmp_path / 'convert')).mkdir()
 
             _extract_all(cbx_path, ext_path, flat=True)
-            _upscale_images(ext_path, ups_path, **opts)
+            _upscale_images(ext_path, ups_path)
             _convert_images(ups_path, cnv_path)
             _create_archive(out_path, ext_path, cnv_path)
