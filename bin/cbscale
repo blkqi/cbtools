@@ -1,124 +1,42 @@
 #!/usr/bin/env python
 
-import os
 import sys
-import shutil
-import pathlib
 import argparse
 import tempfile
-import itertools
-import subprocess
 import logging
 
-from cbtools import configure_logging
-from cbtools.core import ComicArchive, ComicInfo, expand_paths
-from cbtools.constants import COMICINFO_XML_NAME
+from pathlib import Path
+from cbtools import configure_logging, convert
+from cbtools.core import expand_paths
 
 
 _program_name = 'cbscale'
 logger = configure_logging()
-
-
-WAIFU2X_BIN = os.getenv('WAIFU2X_BIN', '/usr/bin/waifu2x-ncnn-vulkan')
-WAIFU2X_MODEL = os.getenv('WAIFU2X_MODEL', '/usr/share/waifu2x-ncnn-vulkan/models-upconv_7_anime_style_art_rgb')
-
-
-# TODO move create / extract functionality to core
-
-def _flatten_name(name):
-    # TODO just rename the file completely with enumeration
-    return Path(name).as_posix().replace('/', '__')
-
-
-def _extract_all(cbx_path, src_path, flat=False):
-    logger.info(f'Unpacking archive "{cbx_path}"')
-
-    cfile = ComicArchive(cbx_path)
-
-    for member in cfile.list():
-        if flat:
-            if member.is_dir():
-                continue
-
-            path = (src_path / _flatten_name(member.name))
-        else:
-            path = (src_path / member.name)
-
-        with open(path, 'wb') as f:
-            cfile.extract(member.name, f)
-
-
-def _create_archive(out_path, src_path, dst_path):
-    logger.info(f'Packing archive "{out_path}"')
-
-    cfile = ComicArchive(out_path)
-
-    add_paths = sorted(dst_path.iterdir())
-
-    info_path = (src_path / COMICINFO_XML_NAME)
-    if info_path.exists():
-        add_paths = itertools.chain([info_path], add_paths)
-
-    for path in add_paths:
-        with open(path, 'rb') as f:
-            cfile.add(path.name, f)
-
-    logger.info(f'Created archive "{out_path}"')
-
-
-def _upscale_images(src_path, dst_path, scale, noise, ftype, gpuid):
-    logger.info(f'Upscaling image data')
-
-    cmd = [WAIFU2X_BIN,
-           '-i', src_path, '-o', dst_path,
-           '-s', str(scale), '-n', str(noise),
-           '-f', ftype, '-g', gpuid, '-m', WAIFU2X_MODEL]
-
-    try:
-        process = subprocess.run(cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT
-        )
-    except FileNotFoundError:
-        raise RuntimeError(f'waifu2x-ncnn-vulkan not found: {entrypoint}')
-
-    if process.returncode != 0:
-        sys.stderr.write(process.stdout.decode())
-        raise RuntimeError(f'waifu2x-ncnn-vulkan error code: {process.returncode}')
-
-
-_output_suffix = _program_name
-
-def _output_filename(path, root=None):
-    stem = '_'.join((path.stem, _output_suffix))
-    return ((root or path.parent) / (str(stem) + '.cbz'))
-
+convert._output_suffix = _program_name
 
 def cbscale(files, root, **kwds):
-    for path in expand_paths(files):
-        with (tempfile.TemporaryDirectory() as srcdir,
-              tempfile.TemporaryDirectory() as dstdir):
+    for cbx_path in expand_paths(files):
+        with tempfile.TemporaryDirectory() as tmp_dir:
 
-            src_path = pathlib.Path(srcdir)
-            dst_path = pathlib.Path(dstdir)
+            out_path = convert._output_filename(cbx_path, root=root)
 
-            out_path = _output_filename(path, root=root)
             if out_path.exists():
-                raise RuntimeError(f'path "{out_path}" already exists!')
+                logger.error(f'{out_path!s}: already exists')
+                return 1
 
-            _extract_all(path, src_path)
-            _upscale_images(src_path, dst_path, **kwds)
-            _create_archive(out_path, src_path, dst_path)
+            tmp_path = Path(tmp_dir)
+            (src_path := (tmp_path / 'extract')).mkdir()
+            (dst_path := (tmp_path / 'upscale')).mkdir()
+
+            convert._extract_all(cbx_path, src_path)
+            convert._upscale_images(src_path, dst_path)
+            convert._create_archive(out_path, src_path, dst_path)
 
 
 def parse_args(argv=sys.argv):
     parser = argparse.ArgumentParser(prog=_program_name)
-    parser.add_argument('files', nargs='+', type=pathlib.Path)
-    parser.add_argument('--path', dest='root', type=pathlib.Path)
-    parser.add_argument('--scale', default=2, choices=[1,2,4,8,16,32])
-    parser.add_argument('--noise', default=2, choices=[-1,0,1,2,3])
-    parser.add_argument('--ftype', default='jpg', choices=['jpg', 'png', 'webp'], type=str)
-    parser.add_argument('--gpuid', default='auto', type=str)
+    parser.add_argument('files', nargs='+', type=Path)
+    parser.add_argument('--path', dest='root', type=Path)
     args = parser.parse_args(argv[1:])
     return vars(args)
 
@@ -127,11 +45,11 @@ def main():
     args = parse_args()
 
     try:
-        cbscale(**args)
+        sts = cbscale(**args)
     except KeyboardInterrupt:
         return 1
 
-    return 0
+    return sts
 
 if __name__ == '__main__':
     sys.exit(main())
