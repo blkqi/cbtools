@@ -19,6 +19,19 @@ DEFAULT_CONFIG = {
     "tag.series_id_filename": ".anilist.txt",
     "tag.write_series_id_file": False,
     "tag.extensions": [],
+    "image.size": (1860, 2480),
+    "image.gamma" : 1/1.8,
+    "image.gain" : 1,
+    "image.format": "JPEG",
+    "image.quality": 85,
+    "image.optimize": 1,
+    "image.background": "black",
+    "image.convert.jobs": 16,
+    "image.upscale.cutoff": 4,
+    "image.upscale.factor": 2,
+    "image.upscale.noise": 2,
+    "image.upscale.format": "jpg",
+    "image.upscale.gpu": "auto",
 }
 
 def load_config():
