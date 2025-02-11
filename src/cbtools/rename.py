@@ -3,16 +3,13 @@ import shutil
 import string
 import logging
 
-from functools import reduce
 from itertools import chain, groupby
 from pathlib import Path
 from operator import itemgetter
-from collections import Counter
 
 from cbtools.log import logger
 from cbtools.core import ComicArchive, expand_paths
 from cbtools.config import config
-
 
 def _allowed_chars():
     return string.ascii_letters + string.digits + " _-~.'!@#$%^&()[]{}"

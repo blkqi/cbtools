@@ -11,7 +11,6 @@ from cbtools.core import ComicInfo, ComicArchive, expand_paths
 from cbtools.config import config
 from cbtools.constants import COMICINFO_XML_NAME
 
-
 class AniListAdapter(requests.adapters.HTTPAdapter):
     def __init__(self, *args, **kwds):
         super().__init__(*args, **kwds)
