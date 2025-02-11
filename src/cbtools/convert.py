@@ -74,7 +74,7 @@ def _process_skips(src_path, dst_path):
         imgdim = image.size(path)
 
         if any(((factor * imgdim[i]) > (cutoff * devdim[i])) for i in range(2)):
-            logger.debug(f'skip: image dimension "{path.name}" exceeds cutoff')
+            logger.debug(f'skip: image dimension exceeds cutoff: "{path.name}"')
             path.rename(dst_path / path.name)
 
 
