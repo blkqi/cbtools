@@ -115,6 +115,9 @@ class ComicArchive(object):
         buffer = BytesIO(process.stdout)
         yield from map(self._parse_member, iter(buffer))
 
+    def create(self, *args):
+        self._create(*args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+
     def extract(self, arcname: str, f: BinaryIO) -> None:
         self._extract(arcname, stdout=f, stderr=subprocess.STDOUT)
 
@@ -127,11 +130,11 @@ class ComicArchive(object):
     def write(self, arcname: str, data: bytes) -> None:
         self._add(arcname, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, input=data)
 
-    def create(self, *args):
-        return _subprocess_run(['7z', 'a', self.filepath, *args], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-
     def _list(self, **kwds):
         return _subprocess_run(['7z', 'l', self.filepath, '-ba'], **kwds)
+
+    def _create(self, *args, **kwds):
+        return _subprocess_run(['7z', 'a', self.filepath, *args], **kwds)
 
     def _extract(self, arcname: str, **kwds):
         return _subprocess_run(['7z', 'x', self.filepath, arcname, *self._args, '-so'], **kwds)
