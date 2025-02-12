@@ -8,6 +8,7 @@ import logging
 from pathlib import Path
 
 from cbtools import configure_logging
+from cbtools.convert import convert
 from cbtools.core import ComicArchive, expand_paths
 from cbtools.info import info
 from cbtools.manager import manager, flush, rescan, clear, list_items
@@ -19,7 +20,7 @@ logger = configure_logging()
 
 
 def parse_args(argv=sys.argv):
-    parser = argparse.ArgumentParser(prog='cb')
+    parser = argparse.ArgumentParser('cb')
     subparsers = parser.add_subparsers(dest='command')
 
     parser_info = subparsers.add_parser('info')
@@ -35,6 +36,10 @@ def parse_args(argv=sys.argv):
     parser_tag.add_argument('files', nargs='+', type=Path)
     parser_tag.add_argument('--anilist', dest='series_id', type=int)
     parser_tag.add_argument('--dryrun', action='store_true')
+
+    parser_convert = subparsers.add_parser('convert')
+    parser_convert.add_argument('files', nargs='+', type=Path)
+    parser_convert.add_argument('--path', dest='root', type=Path)
 
     parser_manager = subparsers.add_parser('manager')
     subparsers_manager = parser_manager.add_subparsers(dest='manager_command')
@@ -90,6 +95,8 @@ def main():
             tag(**get_args_dict(args))
         elif args.command == 'rename':
             rename(**get_args_dict(args))
+        elif args.command == 'convert':
+            convert(**get_args_dict(args))
         else:
             logger.error('Invalid cb command: %s', args.manager_command)
             return 1
