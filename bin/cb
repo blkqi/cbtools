@@ -23,83 +23,85 @@ def parse_args(argv=sys.argv):
     parser = argparse.ArgumentParser('cb')
     subparsers = parser.add_subparsers(dest='command')
 
-    parser_info = subparsers.add_parser('info')
-    parser_info.add_argument('files', nargs='+', type=Path)
+    def add_info_parser(subparsers):
+        parser = subparsers.add_parser('info')
+        parser.add_argument('files', nargs='+', type=Path)
+        parser.set_defaults(command=info)
 
-    parser_rename = subparsers.add_parser('rename')
-    parser_rename.add_argument('files', nargs='+', type=Path)
-    parser_rename.add_argument('--path', dest='root', type=Path, default=Path(''))
-    parser_rename.add_argument('--dryrun', action='store_true')
-    parser_rename.add_argument('--debug', action='store_true')
+    def add_rename_parser(subparsers):
+        parser = subparsers.add_parser('rename')
+        parser.add_argument('files', nargs='+', type=Path)
+        parser.add_argument('--path', dest='root', type=Path, default=Path(''))
+        parser.add_argument('--dryrun', action='store_true')
+        parser.add_argument('--debug', action='store_true')
+        parser.set_defaults(command=rename)
 
-    parser_tag = subparsers.add_parser('tag')
-    parser_tag.add_argument('files', nargs='+', type=Path)
-    parser_tag.add_argument('--anilist', dest='series_id', type=int)
-    parser_tag.add_argument('--dryrun', action='store_true')
+    def add_tag_parser(subparsers):
+        parser = subparsers.add_parser('tag')
+        parser.add_argument('files', nargs='+', type=Path)
+        parser.add_argument('--anilist', dest='series_id', type=int)
+        parser.add_argument('--dryrun', action='store_true')
+        parser.set_defaults(command=tag)
 
-    parser_convert = subparsers.add_parser('convert')
-    parser_convert.add_argument('files', nargs='+', type=Path)
-    parser_convert.add_argument('--path', dest='root', type=Path)
+    def add_convert_parser(subparsers):
+        parser = subparsers.add_parser('convert')
+        parser.add_argument('files', nargs='+', type=Path)
+        parser.add_argument('--path', dest='root', type=Path)
+        parser.set_defaults(command=convert)
 
-    parser_manager = subparsers.add_parser('manager')
-    subparsers_manager = parser_manager.add_subparsers(dest='manager_command')
+    def add_manager_parser(subparsers):
+        parser = subparsers.add_parser('manager')
+        subparsers = parser.add_subparsers()
 
-    parser_manager_run = subparsers_manager.add_parser('run')
-    parser_manager_flush = subparsers_manager.add_parser('flush')
-    parser_manager_clear = subparsers_manager.add_parser('clear')
-    parser_manager_rescan = subparsers_manager.add_parser('rescan')
-    parser_manager_rescan.add_argument('files', nargs='*', type=Path, default=None)
-    parser_manager_list = subparsers_manager.add_parser('list')
+        def add_run_parser(subparsers):
+            parser = subparsers.add_parser('run')
+            parser.set_defaults(command=lambda **kwds: manager())
+
+        def add_flush_parser(subparsers):
+            parser = subparsers.add_parser('flush')
+            parser.set_defaults(command=lambda **kwds: flush())
+
+        def add_clear_parser(subparsers):
+            parser = subparsers.add_parser('clear')
+            parser.set_defaults(command=lambda **kwds: clear())
+
+        def add_rescan_parser(subparsers):
+            parser = subparsers.add_parser('rescan')
+            parser.add_argument('files', nargs='*', type=Path, default=None)
+            parser.set_defaults(command=rescan)
+
+        def add_list_parser(subparsers):
+            parser = subparsers.add_parser('list')
+            parser.set_defaults(command=lambda **kwds: print(list_items().json()))
+
+        add_run_parser(subparsers)
+        add_flush_parser(subparsers)
+        add_clear_parser(subparsers)
+        add_rescan_parser(subparsers)
+        add_list_parser(subparsers)
+
+    add_info_parser(subparsers)
+    add_rename_parser(subparsers)
+    add_tag_parser(subparsers)
+    add_convert_parser(subparsers)
+    add_manager_parser(subparsers)
 
     args = parser.parse_args(argv[1:])
 
-    return args
-
-
-def get_args_dict(args):
     if hasattr(args, 'debug'):
         if args.debug:
             logger.setLevel(logging.DEBUG)
         delattr(args, 'debug')
-
-    if hasattr(args, 'command'):
-        delattr(args, 'command')
-
-    if hasattr(args, 'manager_command'):
-        delattr(args, 'manager_command')
 
     return vars(args)
 
 
 def main():
     args = parse_args()
+    func = args.pop('command')
 
     try:
-        if args.command == 'manager':
-            if args.manager_command == 'run':
-                manager()
-            elif args.manager_command == 'flush':
-                flush()
-            elif args.manager_command == 'clear':
-                clear()
-            elif args.manager_command == 'rescan':
-                rescan(**get_args_dict(args))
-            elif args.manager_command == 'list':
-                print(list_items().json())
-            else:
-                logger.error('Invalid manager command: %s', args.manager_command)
-                return 1
-        elif args.command == 'info':
-            info(**get_args_dict(args))
-        elif args.command == 'tag':
-            tag(**get_args_dict(args))
-        elif args.command == 'rename':
-            rename(**get_args_dict(args))
-        elif args.command == 'convert':
-            convert(**get_args_dict(args))
-        else:
-            logger.error('Invalid cb command: %s', args.manager_command)
-            return 1
+        func(**args)
     except KeyboardInterrupt:
         return 1
 
