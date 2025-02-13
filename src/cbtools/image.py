@@ -4,6 +4,10 @@ from cbtools.functools import compose
 from PIL import Image, ImageOps, UnidentifiedImageError
 
 
+# disable decompression bomb detection
+Image.MAX_IMAGE_PIXELS = None
+
+
 def size(path):
     try:
         return Image.open(path).size
