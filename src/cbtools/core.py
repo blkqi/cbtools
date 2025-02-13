@@ -1,20 +1,15 @@
 import sys
-import dictdiffer
-import lxml.etree
-import platform
+import io
 import re
-import shutil
-import tempfile
-import subprocess
 import zipfile
 import struct
+import subprocess
+import dictdiffer
+import lxml.etree
 import importlib.resources
 
-from io import BytesIO
-from pathlib import Path
-from operator import itemgetter
-
 from cbtools.constants import COMICINFO_XML_NAME, COMICINFO_XSD_NAME
+
 
 class ComicInfo(dict):
     _xml_filename = COMICINFO_XML_NAME
@@ -102,13 +97,13 @@ class ComicArchive(object):
     def info(self):
         data = self.read(COMICINFO_XML_NAME)
         if data:
-            return ComicInfo.parse(BytesIO(data))
+            return ComicInfo.parse(io.BytesIO(data))
         else:
             return ComicInfo()
 
     def list(self):
         process = self._list(stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        buffer = BytesIO(process.stdout)
+        buffer = io.BytesIO(process.stdout)
         yield from map(self._parse_member, iter(buffer))
 
     def create(self, *args):
