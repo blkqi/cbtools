@@ -33,7 +33,7 @@ def _formatters():
     )
 
 
-def _path_from_cinfo(cinfo, default=''):
+def _name_from_info(cinfo, default=''):
     # prefer localized series to series, if it exists
     cinfo['Series'] = cinfo.get('LocalizedSeries') or cinfo.get('Series')
 
@@ -42,14 +42,14 @@ def _path_from_cinfo(cinfo, default=''):
     values = {k: _sanitize_paths(f(cinfo[k])) for k, f in _formatters() if k in cinfo}
     strpath = template.substitute(defaults, **values)
 
-    return Path(strpath.strip() + '.cbz')
+    return strpath.strip()
 
 
 def _construct_rename_pairs(paths, *, root):
     for src in paths:
         cinfo = ComicArchive(src).info()
         if cinfo:
-            dst = root / _path_from_cinfo(cinfo)
+            dst = (root / _name_from_info(cinfo)).with_suffix(src.suffix)
             if src != dst:
                 yield src, dst
             else:
