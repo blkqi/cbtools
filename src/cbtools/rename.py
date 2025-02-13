@@ -1,15 +1,16 @@
 import os
 import shutil
 import string
-import logging
 
-from itertools import chain, groupby
 from pathlib import Path
 from operator import itemgetter
+from itertools import chain
 
 from cbtools.log import logger
 from cbtools.core import ComicArchive, expand_paths
 from cbtools.config import config
+from cbtools.functools import unique, not_unique
+
 
 def _allowed_chars():
     return string.ascii_letters + string.digits + " _-~.'!@#$%^&()[]{}"
@@ -77,23 +78,14 @@ def _rename_file(src, dst):
     shutil.copyfile(src, dst)
     src.unlink()
 
-def _unique(iterable):
-    return map(itemgetter(0), groupby(iterable))
-
-def _unique_count(iterable):
-    return ((x, sum(1 for _ in g)) for x, g in groupby(iterable))
-
-def _not_unique(iterable):
-    return (x for x, n in _unique_count(iterable) if n > 1)
-
 def _check_has_errors(pairs):
     log_noexist = lambda src: logger.error(f'Source {src} doesn\'t exist!') or src
     log_replace = lambda dst: logger.error(f'Destination {dst} already exists!') or dst
     log_collide = lambda dst: logger.error(f'More than one file would be renamed to {dst}!') or dst
 
-    gen_noexist = _unique(sorted(src for src, _ in pairs if not src.exists()))
-    gen_replace = _unique(sorted(dst for _, dst in pairs if dst.exists()))
-    gen_collide = _not_unique(sorted(dst for _, dst in pairs))
+    gen_noexist = unique(sorted(src for src, _ in pairs if not src.exists()))
+    gen_replace = unique(sorted(dst for _, dst in pairs if dst.exists()))
+    gen_collide = not_unique(sorted(dst for _, dst in pairs))
 
     all_errors = chain(map(log_noexist, gen_noexist),
                        map(log_replace, gen_replace),
