@@ -3,6 +3,8 @@ import requests
 import jmespath
 import importlib.resources
 
+from functools import lru_cache
+
 from cbtools.log import logger
 from cbtools.core import ComicInfo
 from cbtools.config import config
@@ -42,6 +44,7 @@ class AniList:
         self.session.mount('http://', adapter)
         self.session.mount('https://', adapter)
 
+    @lru_cache(1)
     def search(self, series_id):
         media_format = 'MANGA'
         query = importlib.resources.files(__name__).joinpath('anilistid.gql').open().read()
