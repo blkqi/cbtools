@@ -56,7 +56,7 @@ def _create_archive(out_path, src_path, dst_path):
 
 
 def _output_filename(path, root=None):
-    stem = '_'.join((path.stem, config['image.convert.suffix']))
+    stem = '_'.join((path.stem, config['convert.suffix']))
     return ((root or path.parent) / (str(stem) + path.suffix))
 
 
@@ -107,7 +107,7 @@ def _upscale_images(src_path, dst_path):
 def _convert_images(src_path, dst_path):
     logger.info(f'Converting image data')
 
-    pool = multiprocessing.Pool(config['image.convert.jobs'])
+    pool = multiprocessing.Pool(config['convert.jobs'])
     paths = (p for p in src_path.iterdir() if p.name != COMICINFO_XML_NAME)
     result = pool.map(partial(image.convert, root=dst_path), paths)
 
