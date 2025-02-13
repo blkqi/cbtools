@@ -27,6 +27,7 @@ DEFAULT_CONFIG = {
     "image.quality": 85,
     "image.optimize": 1,
     "image.background": "black",
+    "image.convert.suffix": "converted",
     "image.convert.jobs": 16,
     "image.upscale.cutoff": 4,
     "image.upscale.factor": 2,

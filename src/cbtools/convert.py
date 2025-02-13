@@ -55,11 +55,9 @@ def _create_archive(out_path, src_path, dst_path):
     logger.info(f'Created archive "{out_path}"')
 
 
-_output_suffix = 'cbconvert'
-
 def _output_filename(path, root=None):
-    stem = '_'.join((path.stem, _output_suffix))
-    return ((root or path.parent) / (str(stem) + '.cbz'))
+    stem = '_'.join((path.stem, config['image.convert.suffix']))
+    return ((root or path.parent) / (str(stem) + path.suffix))
 
 
 def _process_skips(src_path, dst_path):
