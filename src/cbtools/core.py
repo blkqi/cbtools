@@ -8,7 +8,9 @@ import dictdiffer
 import lxml.etree
 import importlib.resources
 
-from cbtools.constants import COMICINFO_XML_NAME, COMICINFO_XSD_NAME
+from cbtools.constants import (COMICINFO_XML_NAME,
+                               COMICINFO_XSD_NAME,
+                               SUPPORTED_FILE_EXTENSIONS)
 
 
 class ComicInfo(dict):
@@ -157,5 +159,5 @@ def expand_paths(paths):
             continue
         elif path.is_dir():
             yield from expand_paths(list(path.iterdir()))
-        elif path.is_file() and path.suffix.lower() == '.cbz':
+        elif path.is_file() and path.suffix.lower() in SUPPORTED_FILE_EXTENSIONS:
             yield path
