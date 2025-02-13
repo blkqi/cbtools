@@ -15,6 +15,7 @@ def configure_logging() -> logging.Logger:
 
     return logger
 
+
 def configure_file_logging(name: str) -> None:
     log_path = pathlib.Path(config['logging.path'])
 

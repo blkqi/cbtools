@@ -5,6 +5,7 @@ import pathlib
 
 from cbtools.log import logger
 
+
 CONFIG_FILE_PATH = os.getenv('CONFIG_FILE_PATH', os.getcwd() + '/config.json')
 DEFAULT_CONFIG = {
     "logging.path": str(pathlib.Path(CONFIG_FILE_PATH).parent / 'logs'),
@@ -34,6 +35,7 @@ DEFAULT_CONFIG = {
     "image.upscale.gpu": "auto",
 }
 
+
 def load_config():
     config = DEFAULT_CONFIG
 
@@ -44,5 +46,6 @@ def load_config():
         logger.warning('Failed to load config, using defaults')
 
     return config
+
 
 config = load_config()

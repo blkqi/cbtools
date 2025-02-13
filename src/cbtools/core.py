@@ -43,6 +43,7 @@ class ComicInfo(dict):
     def _xsd_path(self):
         return importlib.resources.files(__name__).joinpath(self._xsd_filename)
 
+
 class ComicArchiveMember(object):
     def __init__(self, name, mtime, attr, size, compressed):
         self.name = name
@@ -51,6 +52,7 @@ class ComicArchiveMember(object):
 
     def is_dir(self):
         return self.attr.startswith('D')
+
 
 class ComicArchive(object):
     _member_struct = struct.Struct('20s 6s 13s 13s')
@@ -95,8 +97,7 @@ class ComicArchive(object):
         return 0
 
     def info(self):
-        data = self.read(COMICINFO_XML_NAME)
-        if data:
+        if data := self.read(COMICINFO_XML_NAME):
             return ComicInfo.parse(io.BytesIO(data))
         else:
             return ComicInfo()
@@ -138,6 +139,7 @@ class ComicArchive(object):
         args = (x.decode().strip() for x in (name, *self._member_struct.unpack_from(info)))
         return ComicArchiveMember(*args)
 
+
 def _subprocess_run(cmd, **kwds):
     process = subprocess.run(cmd, **kwds)
 
@@ -145,6 +147,7 @@ def _subprocess_run(cmd, **kwds):
         raise RuntimeError(f'{cmd!r} returned error code {process.returncode}\n')
 
     return process
+
 
 def expand_paths(paths):
     for path in paths:
