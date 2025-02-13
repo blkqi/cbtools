@@ -3,7 +3,7 @@ import pathlib
 from flask import Flask, request
 
 from cbtools.config import config
-from cbtools.constants import SUPPORTED_FILE_EXTENSIONS as _extensions
+from cbtools.constants import SUPPORTED_FILE_EXTENSIONS as _valid_exts
 from cbtools.manager.queue import manager_queue
 
 app = Flask(__name__)
@@ -26,7 +26,7 @@ def rescan():
     else:
         for path in library.iterdir():
             if path.is_dir():
-                if any(f.suffix.lower() in _extensions for f in path.iterdir()):
+                if any(f.suffix.lower() in _valid_exts for f in path.iterdir()):
                     manager_queue.enqueue(path)
 
     return ("", 204)
