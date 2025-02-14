@@ -17,6 +17,7 @@ from cbtools.manager.api import app
 from cbtools.manager.queue import manager_queue
 from cbtools.tag import AniList, tag
 from cbtools.rename import rename
+from cbtools.repack import repack
 from cbtools.manager.api import app
 from cbtools.manager.queue import manager_queue
 
@@ -72,6 +73,13 @@ async def worker() -> None:
 
             # TODO: i/o bound ops should run async
             # TODO: handle more errors
+
+            try:
+                repack([path], dryrun=config['manager.test_mode'])
+            except NameError as e:
+                logger.error(e)
+                processing_items.remove(path)
+                continue
 
             try:
                 tag([path], dryrun=config['manager.test_mode'])
