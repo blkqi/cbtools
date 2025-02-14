@@ -12,6 +12,7 @@ from cbtools.convert import convert
 from cbtools.core import ComicArchive, expand_paths
 from cbtools.info import info
 from cbtools.manager import manager, flush, rescan, clear, list_items
+from cbtools.repack import repack
 from cbtools.rename import rename
 from cbtools.tag import tag
 
@@ -28,6 +29,11 @@ def parse_args(argv=sys.argv):
         parser = subparsers.add_parser('info')
         parser.add_argument('files', nargs='+', type=Path)
         parser.set_defaults(command=info)
+
+    def add_repack_parser(subparsers):
+        parser = subparsers.add_parser('repack')
+        parser.add_argument('files', nargs='+', type=Path)
+        parser.set_defaults(command=repack)
 
     def add_rename_parser(subparsers):
         parser = subparsers.add_parser('rename')
@@ -81,6 +87,7 @@ def parse_args(argv=sys.argv):
         add_list_parser(subparsers)
 
     add_info_parser(subparsers)
+    add_repack_parser(subparsers)
     add_rename_parser(subparsers)
     add_tag_parser(subparsers)
     add_convert_parser(subparsers)
