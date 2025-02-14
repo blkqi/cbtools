@@ -1,5 +1,5 @@
 import os
-import typing
+import sys
 import tempfile
 import subprocess
 import multiprocessing
@@ -10,7 +10,7 @@ from cbtools.log import logger
 from cbtools.core import ComicArchive, expand_paths
 from cbtools.config import config
 from cbtools.functools import partial, chain
-from cbtools.constants import *
+from cbtools.constants import COMICINFO_XML_NAME
 
 
 WAIFU2X_BIN = os.getenv('WAIFU2X_BIN', '/usr/bin/waifu2x-ncnn-vulkan')
@@ -97,7 +97,7 @@ def _upscale_images(src_path, dst_path):
     try:
         proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     except FileNotFoundError:
-        raise RuntimeError(f'waifu2x-ncnn-vulkan not found: {entrypoint}')
+        raise RuntimeError(f'waifu2x-ncnn-vulkan not found: {WAIFU2X_BIN}')
 
     if proc.returncode != 0:
         sys.stderr.write(proc.stdout.decode())
