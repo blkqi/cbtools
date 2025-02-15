@@ -84,9 +84,15 @@ def _rename_file(src, dst):
 
 
 def _check_has_errors(pairs):
-    log_noexist = lambda src: logger.error(f'Source {src} doesn\'t exist!') or src
-    log_replace = lambda dst: logger.error(f'Destination {dst} already exists!') or dst
-    log_collide = lambda dst: logger.error(f'More than one file would be renamed to {dst}!') or dst
+    def log_noexist(src):
+        logger.error(f'Source {src} doesn\'t exist!')
+        return src
+    def log_replace(dst):
+        logger.error(f'Destination {dst} already exists!')
+        return dst
+    def log_collide(dst):
+        logger.error(f'More than one file would be renamed to {dst}!')
+        return dst
 
     gen_noexist = unique(sorted(src for src, _ in pairs if not src.exists()))
     gen_replace = unique(sorted(dst for _, dst in pairs if dst.exists()))
