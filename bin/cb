@@ -33,6 +33,8 @@ def parse_args(argv=sys.argv):
     def add_repack_parser(subparsers):
         parser = subparsers.add_parser('repack')
         parser.add_argument('files', nargs='+', type=Path)
+        parser.add_argument('--clean', dest='remove_source', action='store_true')
+        parser.add_argument('--dryrun', action='store_true')
         parser.set_defaults(command=repack)
 
     def add_rename_parser(subparsers):

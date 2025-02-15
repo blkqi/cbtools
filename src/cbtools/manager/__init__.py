@@ -75,7 +75,7 @@ async def worker() -> None:
             # TODO: handle more errors
 
             try:
-                repack([path], dryrun=config['manager.test_mode'])
+                repack([path], remove_source=True, dryrun=config['manager.test_mode'])
             except NameError as e:
                 logger.error(e)
                 processing_items.remove(path)
