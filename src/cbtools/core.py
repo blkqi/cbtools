@@ -79,7 +79,7 @@ class ComicArchive(object):
             raise RuntimeError(f'unsupported file type "{ext}"')
 
     def _parse_volume(self):
-        filename_parts = self.filepath.stem.split(' ')
+        filename_parts = re.split(r"[_\.\s]+", self.filepath.stem)
         filename_parts.reverse()
 
         for part in filename_parts:
