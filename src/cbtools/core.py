@@ -83,11 +83,11 @@ class ComicArchive(object):
         filename_parts.reverse()
 
         for part in filename_parts:
-            if match := re.search(r'[vV](\d+\.?\d*)', part):
+            if match := re.search(r'[vV](\d{1,3}+\.?\d*)', part):
                 return match.group(1)
 
         for part in filename_parts:
-            if match := re.search(r'(\d+)', part):
+            if match := re.search(r'(\d{1,3}+)', part):
                 return match.group(1)
 
         matching_vols = len([x for x in self.filepath.parent.iterdir() if x.suffix == self.filepath.suffix])
