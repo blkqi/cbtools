@@ -2,4 +2,7 @@
 
 def extension(cinfo, data):
     if data['isAdult']:
-        cinfo['Tags'] = ','.join([cinfo['Tags'], 'Adult'])
+        if 'Tags' not in cinfo:
+            cinfo['Tags'] = 'Adult'
+        else:
+            cinfo['Tags'] = ','.join([cinfo['Tags'], 'Adult'])

@@ -76,21 +76,21 @@ async def worker() -> None:
 
             try:
                 repack([path], remove_source=True, dryrun=config['manager.test_mode'])
-            except NameError as e:
+            except (RuntimeError, NameError, OSError) as e:
                 logger.error(e)
                 processing_items.remove(path)
                 continue
 
             try:
                 tag([path], dryrun=config['manager.test_mode'])
-            except NameError as e:
+            except (RuntimeError, NameError, OSError) as e:
                 logger.error(e)
                 processing_items.remove(path)
                 continue
 
             try:
                 rename([path], dryrun=config['manager.test_mode'], root=config['manager.library_path'])
-            except OSError as e:
+            except (RuntimeError, NameError, OSError) as e:
                 logger.error(e)
                 processing_items.remove(path)
                 continue
