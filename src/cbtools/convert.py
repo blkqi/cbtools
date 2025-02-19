@@ -45,7 +45,7 @@ def _extract_all(cbx_path, src_path, flat=False):
 def _create_archive(out_path, src_path, dst_path):
     logger.info(f'Packing archive "{out_path}"')
 
-    add_paths = dst_path.iterdir()
+    add_paths = [str(dst_path) + '/*']
     info_path = (src_path / COMICINFO_XML_NAME)
     if info_path.exists():
         add_paths = chain([info_path], add_paths)
