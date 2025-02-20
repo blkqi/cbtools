@@ -13,6 +13,7 @@ from watchdog.events import PatternMatchingEventHandler, FileSystemEvent
 from cbtools.log import logger
 from cbtools.config import config
 from cbtools.core import ComicArchive, expand_paths
+from cbtools.exceptions import CbtoolsError
 from cbtools.manager.api import app
 from cbtools.manager.queue import manager_queue
 from cbtools.tag import AniList, tag
@@ -76,21 +77,21 @@ async def worker() -> None:
 
             try:
                 repack([path], remove_source=True, dryrun=config['manager.test_mode'])
-            except (RuntimeError, OSError) as e:
+            except CbtoolsError as e:
                 logger.error(e)
                 processing_items.remove(path)
                 continue
 
             try:
                 tag([path], dryrun=config['manager.test_mode'])
-            except (RuntimeError, OSError, NameError) as e:
+            except CbtoolsError as e:
                 logger.error(e)
                 processing_items.remove(path)
                 continue
 
             try:
                 rename([path], dryrun=config['manager.test_mode'], root=config['manager.library_path'])
-            except (RuntimeError, OSError) as e:
+            except CbtoolsError as e:
                 logger.error(e)
                 processing_items.remove(path)
                 continue

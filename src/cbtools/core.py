@@ -11,6 +11,9 @@ import importlib.resources
 from cbtools.constants import (COMICINFO_XML_NAME,
                                COMICINFO_XSD_NAME,
                                SUPPORTED_FILE_EXTENSIONS)
+from cbtools.exceptions import (ParseError,
+                                UnsupportedFileTypeError,
+                                SubprocessError)
 
 
 class ComicInfo(dict):
@@ -76,7 +79,7 @@ class ComicArchive(object):
         try:
             return next(y for x, y in self._allowed_file_exts.items() if ext in (x, y))
         except StopIteration:
-            raise RuntimeError(f'unsupported file type "{ext}"')
+            raise UnsupportedFileTypeError(f'Unsupported file type "{ext}"')
 
     def _parse_volume(self):
         filename_parts = re.split(r"[_\.\s]+", self.filepath.stem)
@@ -95,8 +98,7 @@ class ComicArchive(object):
         if matching_vols == 1:
             return '1'
 
-        # TODO: raise error
-        return 0
+        raise ParseError(f'Could not parse volume from "{self.filepath.stem}"')
 
     def info(self):
         if data := self.read(COMICINFO_XML_NAME):
@@ -146,7 +148,7 @@ def _subprocess_run(cmd, **kwds):
     process = subprocess.run(cmd, **kwds)
 
     if process.returncode != 0:
-        raise RuntimeError(f'{cmd!r} returned error code {process.returncode}\n')
+        raise SubprocessError(f'{cmd!r} returned error code {process.returncode}\n')
 
     return process
 

@@ -2,6 +2,7 @@ from cbtools.log import logger
 from cbtools.core import ComicArchive, expand_paths
 from cbtools.config import config
 from cbtools.constants import COMICINFO_XML_NAME
+from cbtools.exceptions import InvalidArgumentError
 from cbtools.tag.anilist import AniList
 
 
@@ -34,7 +35,7 @@ def _fetch_comic_info(client, path, series_id=None, dryrun=False):
     series_id = series_id or _get_series_id(path)
 
     if not series_id:
-        raise NameError(f'No series ID specified and no {config["tag.series_id_filename"]} found in path!')
+        raise InvalidArgumentError(f'No series ID specified and no {config["tag.series_id_filename"]} found in path!')
 
     if not dryrun:
         _write_series_id(path.parent, series_id)
