@@ -9,40 +9,56 @@ from itertools import chain
 from cbtools.log import logger
 from cbtools.core import ComicArchive, expand_paths
 from cbtools.config import config
-from cbtools.functools import unique, not_unique
+from cbtools.functools import unique, not_unique, compose
+
+
+_allowed_symbols = " _-~.'!@#$%^&()[]{}"
 
 
 def _allowed_chars():
-    return string.ascii_letters + string.digits + " _-~.'!@#$%^&()[]{}"
+    return string.ascii_letters + string.digits + _allowed_symbols
 
 
-def _sanitize_paths(value):
+def _sanitize_segment(value):
     return ''.join(c for c in value if c in _allowed_chars())
 
 
 def _formatters():
-    def volume_formatter(volume):
+    def format_series(cinfo):
+        # prefer localized series to series, if it exists
+        series = cinfo.get('LocalizedSeries') or cinfo.get('Series')
+        return str(series or '')
+
+    def format_writer(cinfo):
+        writer = cinfo.get('Writer')
+        return str(writer or '')
+
+    def format_year(cinfo):
+        year = cinfo.get('Year')
+        return str(year or '')
+
+    def format_volume(cinfo):
+        volume = cinfo.get('Volume', '')
         i, f = str(volume).split('.') if '.' in volume else (str(volume), None)
         return f'V{int(i):02}' + str(f'.{f}' if f else '')
 
-    return (
-        ('Series', str),
-        ('Writer', str),
-        ('Year', str),
-        ('Volume', volume_formatter),
+    formatters = (
+        ('Series', format_series),
+        ('Writer', format_writer),
+        ('Year',   format_year),
+        ('Volume', format_volume),
     )
+    return ((k, compose(_sanitize_segment, f)) for k, f in formatters)
 
 
-def _name_from_info(cinfo, default=''):
-    # prefer localized series to series, if it exists
-    cinfo['Series'] = cinfo.get('LocalizedSeries') or cinfo.get('Series')
+def _format_segments(cinfo):
+    return {key: fun(cinfo) for key, fun in _formatters()}
 
+
+def _name_from_info(cinfo):
     template = string.Template(config['rename.pattern'])
-    defaults = {key: default for key in template.get_identifiers()}
-    values = {k: _sanitize_paths(f(cinfo[k])) for k, f in _formatters() if k in cinfo}
-    strpath = template.substitute(defaults, **values)
-
-    return strpath.strip()
+    segments = _format_segments(cinfo)
+    return template.substitute(**segments).strip()
 
 
 def _construct_rename_pairs(paths, *, root):
@@ -83,33 +99,35 @@ def _rename_file(src, dst):
     src.unlink()
 
 
-def _check_has_errors(pairs):
-    def log_noexist(src):
+def _check_errors(pairs):
+    def log_missing(src):
         logger.error(f'Source {src} doesn\'t exist!')
         return src
+
     def log_replace(dst):
         logger.error(f'Destination {dst} already exists!')
         return dst
+
     def log_collide(dst):
         logger.error(f'More than one file would be renamed to {dst}!')
         return dst
 
-    gen_noexist = unique(sorted(src for src, _ in pairs if not src.exists()))
+    gen_missing = unique(sorted(src for src, _ in pairs if not src.exists()))
     gen_replace = unique(sorted(dst for _, dst in pairs if dst.exists()))
     gen_collide = not_unique(sorted(dst for _, dst in pairs))
 
-    all_errors = chain(map(log_noexist, gen_noexist),
-                       map(log_replace, gen_replace),
-                       map(log_collide, gen_collide))
+    errors = chain(map(log_missing, gen_missing),
+                   map(log_replace, gen_replace),
+                   map(log_collide, gen_collide))
 
-    return any(list(all_errors))
+    return any(list(errors))
 
 
 def rename(files, root=Path(''), dryrun=False):
     paths = expand_paths(files)
     pairs = set(_construct_rename_pairs(paths, root=root))
 
-    if _check_has_errors(pairs) and not dryrun:
+    if _check_errors(pairs) and not dryrun:
         return
 
     parents = set((src.parent, dst.parent) for src, dst in pairs if src.parent != dst.parent)
