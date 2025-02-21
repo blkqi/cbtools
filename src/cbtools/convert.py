@@ -82,7 +82,7 @@ def _process_skips(src_path, dst_path):
 
 
 def _upscale_images(src_path, dst_path):
-    logger.info(f'Upscaling image data')
+    logger.info('Upscaling image data')
 
     _process_skips(src_path, dst_path)
 
@@ -106,11 +106,11 @@ def _upscale_images(src_path, dst_path):
 
 
 def _convert_images(src_path, dst_path):
-    logger.info(f'Converting image data')
+    logger.info('Converting image data')
 
     pool = multiprocessing.Pool(config['convert.jobs'])
     paths = (p for p in src_path.iterdir() if p.name != COMICINFO_XML_NAME)
-    result = pool.map(partial(image.convert, root=dst_path), paths)
+    pool.map(partial(image.convert, root=dst_path), paths)
 
 
 def convert(files, root, **kwds):

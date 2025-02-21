@@ -1,7 +1,5 @@
-import sys
 import io
 import re
-import zipfile
 import struct
 import subprocess
 import dictdiffer
