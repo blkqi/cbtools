@@ -80,16 +80,20 @@ class ComicArchive(object):
             raise UnsupportedFileTypeError(f'Unsupported file type "{ext}"')
 
     def _parse_volume(self):
-        filename_parts = re.split(r"[_\.\s]+", self.filepath.stem)
+        filename_parts = re.split(r"[_\s]+", self.filepath.stem)
         filename_parts.reverse()
 
         for part in filename_parts:
-            if match := re.search(r'[vV](\d{1,3}+\.?\d*)', part):
-                return match.group(1)
+            if match := re.search(r'[vV](\d+\.?\d*)', part):
+                    return match.group(1)
 
         for part in filename_parts:
-            if match := re.search(r'(\d{1,3}+)', part):
-                return match.group(1)
+            if match := re.search(r'(\d+)', part):
+                try:
+                    if 0 < float(match.group(1)) < 1900:
+                        return match.group(1)
+                except ValueError:
+                    pass
 
         matching_vols = len([x for x in self.filepath.parent.iterdir() if x.suffix == self.filepath.suffix])
 
