@@ -68,7 +68,6 @@ class ComicArchive(object):
 
     def __init__(self, filepath, filetype=None):
         self.filepath = filepath
-        self._type = filetype or self._file_type()
         self._args = ['-y']
         self.volume = str(float(self._parse_volume())).removesuffix('.0')
 
