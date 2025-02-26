@@ -133,7 +133,7 @@ class ComicArchive(object):
         return _subprocess_run(['7z', 'x', self.filepath, arcname, *self._args, '-so'], **kwds)
 
     def _add(self, arcname, **kwds):
-        return _subprocess_run(['7z', 'a', self.filepath, *self._args, f'-si{arcname}'], **kwds)
+        return _subprocess_run(['7z', 'a', self.filepath, *self._args, '-tzip', f'-si{arcname}'], **kwds)
 
     def _parse_member(self, line):
         info, name = (line[:self._member_name_offset], line[self._member_name_offset:])
