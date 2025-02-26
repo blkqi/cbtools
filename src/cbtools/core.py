@@ -127,7 +127,7 @@ class ComicArchive(object):
         return _subprocess_run(['7z', 'l', self.filepath, '-ba'], **kwds)
 
     def _create(self, *args, **kwds):
-        return _subprocess_run(['7z', 'a', self.filepath, *args, *self._args], **kwds)
+        return _subprocess_run(['7z', 'a', self.filepath, *args, *self._args, '-tzip'], **kwds)
 
     def _extract(self, arcname, **kwds):
         return _subprocess_run(['7z', 'x', self.filepath, arcname, *self._args, '-so'], **kwds)
