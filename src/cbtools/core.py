@@ -69,7 +69,7 @@ class ComicArchive(object):
     def __init__(self, filepath, filetype=None):
         self.filepath = filepath
         self._type = filetype or self._file_type()
-        self._args = ['-y', f'-t{self._type}']
+        self._args = ['-y']
         self.volume = str(float(self._parse_volume())).removesuffix('.0')
 
     def _file_type(self):
@@ -128,13 +128,13 @@ class ComicArchive(object):
         return _subprocess_run(['7z', 'l', self.filepath, '-ba'], **kwds)
 
     def _create(self, *args, **kwds):
-        return _subprocess_run(['7z', 'a', self.filepath, *args, *self._args], **kwds)
+        return _subprocess_run(['7z', 'a', self.filepath, *args, *self._args, f'-t{self._type}'], **kwds)
 
     def _extract(self, arcname, **kwds):
         return _subprocess_run(['7z', 'x', self.filepath, arcname, *self._args, '-so'], **kwds)
 
     def _add(self, arcname, **kwds):
-        return _subprocess_run(['7z', 'a', self.filepath, *self._args, f'-si{arcname}'], **kwds)
+        return _subprocess_run(['7z', 'a', self.filepath, *self._args, f'-t{self._type}', f'-si{arcname}'], **kwds)
 
     def _parse_member(self, line):
         info, name = (line[:self._member_name_offset], line[self._member_name_offset:])
