@@ -85,7 +85,7 @@ class ComicArchive(object):
 
         for part in filename_parts:
             if match := re.search(r'[vV](\d+\.?\d*)', part):
-                    return match.group(1)
+                return match.group(1)
 
         for part in filename_parts:
             if match := re.search(r'(\d+)', part):
