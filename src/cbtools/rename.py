@@ -65,7 +65,7 @@ def _construct_rename_pairs(paths, *, root):
     for src in paths:
         cinfo = ComicArchive(src).info()
         if cinfo:
-            dst = (Path(root) / _name_from_info(cinfo)).with_suffix(src.suffix)
+            dst = Path(root) / (_name_from_info(cinfo) + src.suffix)
             if src != dst:
                 yield src, dst
             else:
