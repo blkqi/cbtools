@@ -41,4 +41,4 @@ class ManagerQueue:
     def _is_empty(self):
         return len(self._queue) == 0
 
-manager_queue = ManagerQueue(300)
+manager_queue = ManagerQueue(20)

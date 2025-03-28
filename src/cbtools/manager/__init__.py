@@ -5,7 +5,6 @@ import time
 import threading
 
 from pathlib import Path
-from typing import Set, List
 from waitress import serve
 from watchdog.observers import Observer
 from watchdog.events import PatternMatchingEventHandler, FileSystemEvent
@@ -28,7 +27,7 @@ API_BASE_URL = f"http://localhost:{config['manager.api_port']}"
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
-processing_items: Set[Path] = set()
+processing_items = set()
 
 class LibraryHandler(PatternMatchingEventHandler):
     def __init__(self):
@@ -36,7 +35,7 @@ class LibraryHandler(PatternMatchingEventHandler):
 
         super().__init__(patterns=patterns, ignore_patterns=[], ignore_directories=True, case_sensitive=False)
 
-    def on_created(self, event: FileSystemEvent) -> None:
+    def on_created(self, event):
         path = Path(event.src_path)
 
         if path.parent in processing_items:
@@ -45,35 +44,46 @@ class LibraryHandler(PatternMatchingEventHandler):
         self._handle_comic_archive(path)
         self._handle_series_id_file(path)
 
-    def on_modified(self, event: FileSystemEvent) -> None:
+    def on_modified(self, event):
         path = Path(event.src_path)
 
         self._handle_series_id_file(path)
 
-    def _handle_comic_archive(self, path: Path) -> None:
+    def _handle_comic_archive(self, path):
         if path.suffix.strip('.').lower() in ComicArchive._allowed_file_exts.keys():
             logger.debug(f'CBZ file {path.name} updated in {path.parent}')
             manager_queue.enqueue(path.parent)
 
-    def _handle_series_id_file(self, path: Path) -> None:
+    def _handle_series_id_file(self, path):
         if path.name == config['tag.series_id_filename'] and path.parent not in processing_items:
             logger.debug(f"{config['tag.series_id_filename']} update in {path.parent}")
             manager_queue.enqueue(path.parent)
 
 
-async def worker() -> None:
+async def is_folder_write_inprogress(path):
+    def get_folder_size(path):
+        return sum(f.stat().st_size for f in path.glob('*') if f.is_file())
+
+    total_size_before = get_folder_size(path)
+    await asyncio.sleep(2)
+    total_size_after = get_folder_size(path)
+
+    return total_size_before != total_size_after
+
+
+async def worker():
     while True:
         path = manager_queue.dequeue()
-        elapsed = 0
 
         if path:
-            start = time.time()
+            if await is_folder_write_inprogress(path):
+                logger.debug(f"Folder {path} is still being written, skipping...")
+                manager_queue.enqueue(path)
+                continue
+
             processing_items.add(path)
 
             logger.debug(f'Processing {path}')
-
-            # TODO: i/o bound ops should run async
-            # TODO: handle more errors
 
             try:
                 repack([path], remove_source=True, dryrun=config['manager.test_mode'])
@@ -99,14 +109,10 @@ async def worker() -> None:
             logger.debug(f'Finished processing {path}')
 
             processing_items.remove(path)
-            end = time.time()
-            elapsed = end - start
-
-        if elapsed < config['manager.processing_interval']:
-            await asyncio.sleep(config['manager.processing_interval'] - elapsed)
 
 
-def rescan(files: List[Path] = None) -> requests.Response:
+
+def rescan(files=None):
     body = {}
 
     if files:
@@ -122,19 +128,19 @@ def rescan(files: List[Path] = None) -> requests.Response:
     return requests.post(f"{API_BASE_URL}/rescan", json=body)
 
 
-def flush() -> requests.Response:
+def flush():
     return requests.post(f"{API_BASE_URL}/flush")
 
 
-def list_items() -> requests.Response:
+def list_items():
     return requests.get(f"{API_BASE_URL}/list")
 
 
-def clear() -> requests.Response:
+def clear():
     return requests.post(f"{API_BASE_URL}/clear")
 
 
-def manager() -> None:
+def manager():
     logger.info('Starting cbmanager...')
 
     handler = LibraryHandler()
