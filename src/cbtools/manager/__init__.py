@@ -65,7 +65,7 @@ async def is_folder_write_inprogress(path):
         return sum(f.stat().st_size for f in path.glob('*') if f.is_file())
 
     total_size_before = get_folder_size(path)
-    await asyncio.sleep(5)
+    await asyncio.sleep(2)
     total_size_after = get_folder_size(path)
 
     return total_size_before != total_size_after
@@ -74,7 +74,6 @@ async def is_folder_write_inprogress(path):
 async def worker():
     while True:
         path = manager_queue.dequeue()
-        elapsed = 0
 
         if path:
             if await is_folder_write_inprogress(path):
@@ -82,13 +81,9 @@ async def worker():
                 manager_queue.enqueue(path)
                 continue
 
-            start = time.time()
             processing_items.add(path)
 
             logger.debug(f'Processing {path}')
-
-            # TODO: i/o bound ops should run async
-            # TODO: handle more errors
 
             try:
                 repack([path], remove_source=True, dryrun=config['manager.test_mode'])
@@ -114,11 +109,7 @@ async def worker():
             logger.debug(f'Finished processing {path}')
 
             processing_items.remove(path)
-            end = time.time()
-            elapsed = end - start
 
-        if elapsed < config['manager.processing_interval']:
-            await asyncio.sleep(config['manager.processing_interval'] - elapsed)
 
 
 def rescan(files=None):

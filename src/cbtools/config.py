@@ -13,7 +13,6 @@ DEFAULT_CONFIG = {
     "logging.format": '%(asctime)s [%(levelname)8s] %(message)s (%(name)s :: %(filename)s:%(lineno)s)',
     "manager.test_mode": False,
     "manager.library_path": "/library",
-    "manager.processing_interval": 2,
     "manager.api_port": 8080,
     "rename.move_includes": [".anilist.txt", "cover.jpg"],
     "rename.pattern": "${Series} (${Year})/${Series} ${Volume}",
