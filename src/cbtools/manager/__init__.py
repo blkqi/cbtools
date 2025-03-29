@@ -75,40 +75,43 @@ async def worker():
     while True:
         path = manager_queue.dequeue()
 
-        if path:
-            if await is_folder_write_inprogress(path):
-                logger.debug(f"Folder {path} is still being written, skipping...")
-                manager_queue.enqueue(path)
-                continue
+        if not path:
+            asyncio.sleep(10)
+            continue
 
-            processing_items.add(path)
+        if await is_folder_write_inprogress(path):
+            logger.debug(f"Folder {path} is still being written, skipping...")
+            manager_queue.enqueue(path)
+            continue
 
-            logger.debug(f'Processing {path}')
+        processing_items.add(path)
 
-            try:
-                repack([path], remove_source=True, dryrun=config['manager.test_mode'])
-            except CbtoolsError as e:
-                logger.error(e)
-                processing_items.remove(path)
-                continue
+        logger.debug(f'Processing {path}')
 
-            try:
-                tag([path], dryrun=config['manager.test_mode'])
-            except CbtoolsError as e:
-                logger.error(e)
-                processing_items.remove(path)
-                continue
-
-            try:
-                rename([path], dryrun=config['manager.test_mode'], root=config['manager.library_path'])
-            except CbtoolsError as e:
-                logger.error(e)
-                processing_items.remove(path)
-                continue
-
-            logger.debug(f'Finished processing {path}')
-
+        try:
+            repack([path], remove_source=True, dryrun=config['manager.test_mode'])
+        except CbtoolsError as e:
+            logger.error(e)
             processing_items.remove(path)
+            continue
+
+        try:
+            tag([path], dryrun=config['manager.test_mode'])
+        except CbtoolsError as e:
+            logger.error(e)
+            processing_items.remove(path)
+            continue
+
+        try:
+            rename([path], dryrun=config['manager.test_mode'], root=config['manager.library_path'])
+        except CbtoolsError as e:
+            logger.error(e)
+            processing_items.remove(path)
+            continue
+
+        logger.debug(f'Finished processing {path}')
+
+        processing_items.remove(path)
 
 
 
