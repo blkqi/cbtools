@@ -76,7 +76,7 @@ async def worker():
         path = manager_queue.dequeue()
 
         if not path:
-            asyncio.sleep(10)
+            await asyncio.sleep(10)
             continue
 
         if await is_folder_write_inprogress(path):
