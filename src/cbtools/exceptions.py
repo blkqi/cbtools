@@ -21,3 +21,7 @@ class UnsupportedFileTypeError(CbtoolsError):
 class SubprocessError(CbtoolsError):
     """Raised when a subprocess command fails."""
     pass
+
+class FileError(CbtoolsError):
+    """Raised when a file is not found."""
+    pass

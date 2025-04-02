@@ -11,7 +11,7 @@ from cbtools.core import ComicArchive, expand_paths
 from cbtools.config import config
 from cbtools.functools import partial, chain
 from cbtools.constants import COMICINFO_XML_NAME
-from cbtools.exceptions import MissingDependencyError, SubprocessError
+from cbtools.exceptions import MissingDependencyError, SubprocessError, FileError
 
 
 WAIFU2X_BIN = os.getenv('WAIFU2X_BIN', '/usr/bin/waifu2x-ncnn-vulkan')
@@ -97,7 +97,7 @@ def _upscale_images(src_path, dst_path):
 
     try:
         proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    except FileNotFoundError:
+    except FileError:
         raise MissingDependencyError(f'waifu2x-ncnn-vulkan not found: {WAIFU2X_BIN}')
 
     if proc.returncode != 0:

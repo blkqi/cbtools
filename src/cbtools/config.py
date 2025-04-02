@@ -3,6 +3,7 @@ import logging
 import os
 import pathlib
 
+from cbtools.exceptions import FileError
 from cbtools.log import logger
 
 
@@ -42,7 +43,7 @@ def load_config():
     try:
         with open(CONFIG_FILE_PATH, 'r') as f:
             DEFAULT_CONFIG.update(json.load(f))
-    except (FileNotFoundError, json.JSONDecodeError):
+    except (FileError, json.JSONDecodeError):
         logger.warning('Failed to load config, using defaults')
 
     return config

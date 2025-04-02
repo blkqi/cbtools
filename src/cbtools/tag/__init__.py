@@ -2,7 +2,7 @@ from cbtools.log import logger
 from cbtools.core import ComicArchive, expand_paths
 from cbtools.config import config
 from cbtools.constants import COMICINFO_XML_NAME
-from cbtools.exceptions import InvalidArgumentError
+from cbtools.exceptions import InvalidArgumentError, FileError
 from cbtools.tag.anilist import AniList
 
 
@@ -13,7 +13,7 @@ def _get_series_id(path):
     try:
         with open(path / config['tag.series_id_filename']) as file:
             return int(file.read().strip())
-    except FileNotFoundError:
+    except FileError:
         return None
 
 
