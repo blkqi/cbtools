@@ -1,6 +1,7 @@
 import os
 import shutil
 import string
+import unicodedata
 
 from pathlib import Path
 from operator import itemgetter
@@ -13,14 +14,16 @@ from cbtools.functools import unique, not_unique, compose
 
 
 _allowed_symbols = " _-~.'!@#$%^&()[]{}"
+_unicode_chars = ''.join(chr(i) for i in range(0x0000, 0x10000))
 
 
 def _allowed_chars():
-    return string.ascii_letters + string.digits + _allowed_symbols
+    return string.ascii_letters + string.digits + _allowed_symbols + _unicode_chars
 
 
 def _sanitize_segment(value):
-    return ''.join(c for c in value if c in _allowed_chars())
+    return ''.join(c for c in unicodedata.normalize(
+        'NFD', value) if c in _allowed_chars() and not unicodedata.combining(c))
 
 
 def _formatters():
