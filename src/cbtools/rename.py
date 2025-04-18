@@ -14,7 +14,7 @@ from cbtools.functools import unique, not_unique, compose
 
 
 _allowed_symbols = " _-~.'!@#$%^&()[]{}"
-_unicode_chars = ''.join(chr(i) for i in range(0x0000, 0x10000))
+_unicode_chars = ''.join(map(chr, range(0x10000)))
 
 
 def _allowed_chars():
