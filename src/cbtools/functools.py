@@ -1,3 +1,5 @@
+import unicodedata
+
 from functools import reduce, partial
 from itertools import chain, groupby
 from operator import itemgetter
@@ -17,3 +19,16 @@ def unique_count(iterable):
 
 def not_unique(iterable):
     return (x for x, n in unique_count(iterable) if n > 1)
+
+
+def normalizable(chars):
+    normalizable_chars = []
+    for i in chars:
+        char = chr(i)
+        try:
+            normalized_char = unicodedata.normalize('NFD', char)
+            if char != normalized_char:
+                normalizable_chars.append(char)
+        except ValueError:
+            pass
+    return ''.join(normalizable_chars)
