@@ -10,11 +10,11 @@ from itertools import chain
 from cbtools.log import logger
 from cbtools.core import ComicArchive, expand_paths
 from cbtools.config import config
-from cbtools.functools import unique, not_unique, compose
+from cbtools.functools import unique, not_unique, compose, normalizable
 
 
 _allowed_symbols = " _-~.'!@#$%^&()[]{}"
-_unicode_chars = ''.join(map(chr, range(0x10000)))
+_unicode_chars = normalizable(range(0x0100, 0x0180))
 
 
 def _allowed_chars():
