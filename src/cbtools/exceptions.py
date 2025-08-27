@@ -21,3 +21,7 @@ class UnsupportedFileTypeError(CbtoolsError):
 class SubprocessError(CbtoolsError):
     """Raised when a subprocess command fails."""
     pass
+
+class AnilistEntryNotFound(CbtoolsError):
+    """Raised when a requested entry is not found on AniList."""
+    pass
