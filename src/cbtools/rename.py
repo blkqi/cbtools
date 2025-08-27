@@ -145,6 +145,6 @@ def rename(files, root=Path(''), dryrun=False):
 
     for src, _ in parents:
         try:
-            next(src.iterdir())
+            next(f for f in src.iterdir() if not f.name.startswith('.'))
         except StopIteration:
             src.rmdir()

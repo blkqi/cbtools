@@ -5,6 +5,7 @@ import importlib.resources
 
 from functools import lru_cache
 
+from cbtools.exceptions import AnilistEntryNotFound
 from cbtools.log import logger
 from cbtools.core import ComicInfo
 from cbtools.config import config
@@ -54,7 +55,11 @@ class AniList:
         }
 
         response = self.session.post(self.api_url, json={'query': query, 'variables': variables})
-        response.raise_for_status()
+
+        try:
+            response.raise_for_status()
+        except requests.HTTPError:
+            raise AnilistEntryNotFound(f'AniList entry not found for ID {series_id}')
 
         return AniListResponse(response.json())
 

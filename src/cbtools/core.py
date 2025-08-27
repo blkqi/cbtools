@@ -163,5 +163,5 @@ def expand_paths(paths):
             continue
         elif path.is_dir():
             yield from expand_paths(list(path.iterdir()))
-        elif path.is_file() and path.suffix.lower() in SUPPORTED_FILE_EXTENSIONS:
+        elif path.is_file() and path.suffix.lower() in SUPPORTED_FILE_EXTENSIONS and not path.name.startswith('.'):
             yield path
