@@ -2,4 +2,7 @@
 
 def extension(cinfo, data):
     if (data.get('averageScore') or 0) >= 85:
-        cinfo['Tags'] = ','.join([cinfo['Tags'], 'Highly Rated'])
+        if 'Tags' in cinfo and cinfo['Tags']:
+            cinfo['Tags'] = ','.join([cinfo['Tags'], 'Highly Rated'])
+        else:
+            cinfo['Tags'] = 'Highly Rated'

@@ -1,4 +1,3 @@
-import os
 import shutil
 import string
 import unicodedata
@@ -147,4 +146,4 @@ def rename(files, root=Path(''), dryrun=False):
         try:
             next(f for f in src.iterdir() if not f.name.startswith('.'))
         except StopIteration:
-            src.rmdir()
+            shutil.rmtree(src)
