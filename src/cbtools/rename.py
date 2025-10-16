@@ -146,4 +146,7 @@ def rename(files, root=Path(''), dryrun=False):
         try:
             next(f for f in src.iterdir() if not f.name.startswith('.'))
         except StopIteration:
-            shutil.rmtree(src)
+            try:
+                shutil.rmtree(src)
+            except Exception:
+                logger.warning(f'Failed to remove directory: {src}')
