@@ -55,6 +55,7 @@ def parse_args(argv=sys.argv):
         parser = subparsers.add_parser('convert')
         parser.add_argument('files', nargs='+', type=Path)
         parser.add_argument('--path', dest='root', type=Path)
+        parser.add_argument('-d', '--delete-source', action='store_true', help='Delete source files after processing')
         parser.set_defaults(command=convert)
 
     def add_manager_parser(subparsers):
