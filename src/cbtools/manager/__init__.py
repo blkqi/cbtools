@@ -45,6 +45,17 @@ class LibraryHandler(PatternMatchingEventHandler):
         self._handle_series_id_file(path)
 
     def on_modified(self, event):
+        # Ignore permission-only changes (mode changes)
+        if hasattr(event, 'event_type') and event.event_type == 'modified':
+            try:
+                stat_before = getattr(event, 'stat', None)
+                stat_after = Path(event.src_path).stat()
+
+                if stat_before and stat_before.st_size == stat_after.st_size and stat_before.st_mtime == stat_after.st_mtime:
+                    return
+            except Exception:
+                pass
+
         path = Path(event.src_path)
 
         self._handle_series_id_file(path)
