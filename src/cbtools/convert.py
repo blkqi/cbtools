@@ -113,7 +113,7 @@ def _convert_images(src_path, dst_path):
     pool.map(partial(image.convert, root=dst_path), paths)
 
 
-def convert(files, root, **kwds):
+def convert(files, root, delete_source=False, **kwds):
     for cbx_path in expand_paths(files):
         with tempfile.TemporaryDirectory() as tmp_dir:
 
@@ -132,3 +132,10 @@ def convert(files, root, **kwds):
             _upscale_images(ext_path, ups_path)
             _convert_images(ups_path, cnv_path)
             _create_archive(out_path, ext_path, cnv_path)
+
+        if delete_source:
+            try:
+                cbx_path.unlink()
+                logger.info(f'Deleted source file "{cbx_path}"')
+            except Exception as e:
+                logger.warning(f'Failed to delete source file "{cbx_path}": {e}')

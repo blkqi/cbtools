@@ -16,6 +16,7 @@ def parse_args(argv=sys.argv):
     parser = argparse.ArgumentParser(prog=_program_name)
     parser.add_argument('files', nargs='+', type=pathlib.Path)
     parser.add_argument('--path', dest='root', type=pathlib.Path)
+    parser.add_argument('-d', '--delete-source', action='store_true', help='Delete source files after processing')
     args = parser.parse_args(argv[1:])
     return vars(args)
 
