@@ -66,11 +66,11 @@ class ComicArchive(object):
         'cb7': '7z',
     }
 
-    def __init__(self, filepath, filetype=None):
+    def __init__(self, filepath, filetype=None, volume=None):
         self.filepath = filepath
         self._type = filetype or self._file_type()
         self._args = ['-y']
-        self.volume = str(float(self._parse_volume())).removesuffix('.0')
+        self.volume = volume or str(float(self._parse_volume())).removesuffix('.0')
 
     def _file_type(self):
         ext = self.filepath.suffix.lower().strip('.')

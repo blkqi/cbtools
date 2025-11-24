@@ -1,3 +1,7 @@
+import tempfile
+
+from pathlib import Path
+
 from cbtools.constants import SUPPORTED_FILE_EXTENSIONS
 from cbtools.core import ComicArchive, expand_paths
 from cbtools.log import logger
@@ -27,12 +31,22 @@ def repack(files, remove_source=False, dryrun=False, **kwds):
         logger.debug(f'repack starting: {src_path} -> {dst_path}')
 
         src_cfile = ComicArchive(src_path)
-        dst_cfile = ComicArchive(dst_path)
+        dst_cfile = ComicArchive(dst_path, volume=src_cfile.volume)
 
-        for member in src_cfile.list():
-            if member.is_dir():
-                continue
-            dst_cfile.write(member.name, src_cfile.read(member.name))
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmpdir_path = Path(tmpdir)
+
+            for member in src_cfile.list():
+                if member.is_dir():
+                    continue
+
+                file_path = tmpdir_path / member.name
+                file_path.parent.mkdir(parents=True, exist_ok=True)
+
+                with open(file_path, 'wb') as f:
+                    f.write(src_cfile.read(member.name))
+
+            dst_cfile.create(str(tmpdir_path / '*'))
 
         if remove_source:
             src_path.unlink()
