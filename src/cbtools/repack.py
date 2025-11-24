@@ -35,7 +35,7 @@ def repack(files, remove_source=False, dryrun=False, **kwds):
 
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp_path = Path(tmpdir)
-            src_cfile._extract_all(out_path=tmp_path)
+            src_cfile.extract_all(out_path=tmp_path)
             dst_cfile.create(str(tmp_path / '*'))
 
         if remove_source:
