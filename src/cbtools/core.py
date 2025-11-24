@@ -66,11 +66,11 @@ class ComicArchive(object):
         'cb7': '7z',
     }
 
-    def __init__(self, filepath, filetype=None):
+    def __init__(self, filepath, filetype=None, volume=None):
         self.filepath = filepath
         self._type = filetype or self._file_type()
         self._args = ['-y']
-        self.volume = str(float(self._parse_volume())).removesuffix('.0')
+        self.volume = volume or str(float(self._parse_volume())).removesuffix('.0')
 
     def _file_type(self):
         ext = self.filepath.suffix.lower().strip('.')
@@ -119,6 +119,9 @@ class ComicArchive(object):
     def extract(self, arcname, f):
         self._extract(arcname, stdout=f, stderr=subprocess.STDOUT)
 
+    def extract_all(self, out_path):
+        self._extract_all(out_path, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+
     def add(self, arcname, f):
         self._add(arcname, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, stdin=f)
 
@@ -136,6 +139,9 @@ class ComicArchive(object):
 
     def _extract(self, arcname, **kwds):
         return _subprocess_run(['7z', 'x', self.filepath, arcname, *self._args, '-so'], **kwds)
+
+    def _extract_all(self, out_path, **kwds):
+        return _subprocess_run(['7z', 'x', self.filepath, f'-o{out_path}', *self._args], **kwds)
 
     def _add(self, arcname, **kwds):
         return _subprocess_run(['7z', 'a', self.filepath, *self._args, f'-t{self._type}', f'-si{arcname}'], **kwds)
