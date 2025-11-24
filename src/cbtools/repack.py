@@ -34,19 +34,9 @@ def repack(files, remove_source=False, dryrun=False, **kwds):
         dst_cfile = ComicArchive(dst_path, volume=src_cfile.volume)
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            tmpdir_path = Path(tmpdir)
-
-            for member in src_cfile.list():
-                if member.is_dir():
-                    continue
-
-                file_path = tmpdir_path / member.name
-                file_path.parent.mkdir(parents=True, exist_ok=True)
-
-                with open(file_path, 'wb') as f:
-                    f.write(src_cfile.read(member.name))
-
-            dst_cfile.create(str(tmpdir_path / '*'))
+            tmp_path = Path(tmpdir)
+            src_cfile._extract_all(out_path=tmp_path)
+            dst_cfile.create(str(tmp_path / '*'))
 
         if remove_source:
             src_path.unlink()
