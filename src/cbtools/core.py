@@ -25,9 +25,10 @@ class ComicInfo(dict):
     def parse(f):
         try:
             tree = lxml.etree.parse(f)
-            return ComicInfo((child.tag, child.text) for child in tree.getroot())
         except lxml.etree.XMLSyntaxError:
             return ComicInfo()
+
+        return ComicInfo((child.tag, child.text) for child in tree.getroot())
 
     def encode(self, pretty_print=True, **kwds):
         root = lxml.etree.Element('ComicInfo')
