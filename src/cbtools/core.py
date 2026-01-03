@@ -23,7 +23,11 @@ class ComicInfo(dict):
 
     @staticmethod
     def parse(f):
-        tree = lxml.etree.parse(f)
+        try:
+            tree = lxml.etree.parse(f)
+        except lxml.etree.XMLSyntaxError:
+            return ComicInfo()
+
         return ComicInfo((child.tag, child.text) for child in tree.getroot())
 
     def encode(self, pretty_print=True, **kwds):
@@ -132,19 +136,19 @@ class ComicArchive(object):
         self._add(arcname, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, input=data)
 
     def _list(self, **kwds):
-        return _subprocess_run(['7z', 'l', self.filepath, '-ba'], **kwds)
+        return _subprocess_run(['7z', 'l', str(self.filepath), '-ba'], **kwds)
 
     def _create(self, *args, **kwds):
-        return _subprocess_run(['7z', 'a', self.filepath, *args, *self._args, f'-t{self._type}'], **kwds)
+        return _subprocess_run(['7z', 'a', str(self.filepath), *args, *self._args, f'-t{self._type}'], **kwds)
 
     def _extract(self, arcname, **kwds):
-        return _subprocess_run(['7z', 'x', self.filepath, arcname, *self._args, '-so'], **kwds)
+        return _subprocess_run(['7z', 'x', str(self.filepath), arcname, *self._args, '-so'], **kwds)
 
     def _extract_all(self, out_path, **kwds):
-        return _subprocess_run(['7z', 'x', self.filepath, f'-o{out_path}', *self._args], **kwds)
+        return _subprocess_run(['7z', 'x', str(self.filepath), f'-o{out_path}', *self._args], **kwds)
 
     def _add(self, arcname, **kwds):
-        return _subprocess_run(['7z', 'a', self.filepath, *self._args, f'-t{self._type}', f'-si{arcname}'], **kwds)
+        return _subprocess_run(['7z', 'a', str(self.filepath), *self._args, f'-t{self._type}', f'-si{arcname}'], **kwds)
 
     def _parse_member(self, line):
         info, name = (line[:self._member_name_offset], line[self._member_name_offset:])
