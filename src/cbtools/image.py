@@ -61,7 +61,7 @@ def convert_to_webp(root):
         if not img_path.is_file():
             continue
 
-        if img_path.suffix.lower() not in ['.jpg', '.jpeg']:
+        if img_path.suffix.lower() in ['.jpg', '.jpeg']:
             try:
                 im = Image.open(img_path)
                 webp_path = img_path.with_suffix('.webp')
