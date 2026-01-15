@@ -56,24 +56,27 @@ def repack(files, remove_source=False, dryrun=False, root=None, use_webp=False, 
         if src_path == dst_path and not use_webp:
             continue
 
-        if dryrun:
-            logger.info(f'dryrun: {src_path} -> {dst_path}')
-            continue
+        src_cfile = ComicArchive(src_path)
+        webp_temp_path = False
 
-        if dst_path.exists() and src_path != dst_path:
+        if use_webp:
+            has_lossy = lambda m: m.name.lower().endswith(('.jpg', '.jpeg'))
+
+            if not src_cfile.match(has_lossy):
+                if dst_path.suffix.lower() == _repack_file_type:
+                    logger.info(f'Skipping {src_path}: no jpg images found for webp conversion')
+                    continue
+            elif src_path == dst_path:
+                dst_path = src_path.with_name(dst_path.stem + '_webp' + dst_path.suffix)
+                webp_temp_path = True
+
+        if src_path != dst_path and dst_path.exists():
             logger.warning(f'{dst_path}: already exists!')
             continue
 
-        src_cfile = ComicArchive(src_path)
-
-        if use_webp and src_path == dst_path:
-            has_lossy = lambda m: m.name.lower().endswith(('.jpg', '.jpeg'))
-
-            if src_cfile.match(has_lossy):
-                src_cfile.rename(src_path.stem + '_source' + src_path.suffix)
-            else:
-                logger.info(f'Skipping {src_path}: no jpg images found for webp conversion')
-                continue
+        if dryrun:
+            logger.info(f'dryrun: {src_path} -> {dst_path}')
+            continue
 
         logger.debug(f'repack starting: {src_path} -> {dst_path}')
 
@@ -89,6 +92,9 @@ def repack(files, remove_source=False, dryrun=False, root=None, use_webp=False, 
             dst_cfile.create(str(tmp_path / '*'))
 
         if remove_source:
-            src_path.unlink()
+            if webp_temp_path:
+                dst_path.replace(src_path)
+            else:
+                src_path.unlink()
 
         logger.debug(f'repack complete: {src_path} -> {dst_path}')
