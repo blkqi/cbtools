@@ -117,6 +117,17 @@ class ComicArchive(object):
         buffer = io.BytesIO(process.stdout)
         yield from map(self._parse_member, iter(buffer))
 
+    def rename(self, filename):
+        new_src_path = self.filepath.with_name(filename)
+        self.filepath.rename(new_src_path)
+        self.filepath = new_src_path
+
+    def match(self, expr):
+        for member in self.list():
+            if expr(member):
+                return True
+        return False
+
     def create(self, *args):
         self._create(*args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 

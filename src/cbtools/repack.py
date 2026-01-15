@@ -11,20 +11,6 @@ from cbtools.log import logger
 _repack_file_type = '.cbz'
 
 
-def _check_has_lossy_images(cfile):
-    for member in cfile.list():
-        name = member.name.lower()
-        if name.endswith('.jpg') or name.endswith('.jpeg'):
-            return True
-    return False
-
-
-def _prepare_inplace_conversion(src_path):
-    new_src_path = src_path.with_name(src_path.stem + '_source' + src_path.suffix)
-    src_path.rename(new_src_path)
-    return new_src_path
-
-
 def repack(files, remove_source=False, dryrun=False, root=None, use_webp=False, **kwds):
     for src_path in expand_paths(files):
         if src_path.suffix.lower() not in SUPPORTED_FILE_EXTENSIONS:
@@ -51,9 +37,10 @@ def repack(files, remove_source=False, dryrun=False, root=None, use_webp=False, 
         src_cfile = ComicArchive(src_path)
 
         if use_webp and src_path == dst_path:
-            if _check_has_lossy_images(src_cfile):
-                src_path = _prepare_inplace_conversion(src_path)
-                src_cfile = ComicArchive(src_path)
+            has_lossy = lambda m: m.name.lower().endswith(('.jpg', '.jpeg'))
+
+            if src_cfile.match(has_lossy):
+                src_cfile.rename(src_path.stem + '_source' + src_path.suffix)
             else:
                 logger.info(f'Skipping {src_path}: no jpg/jpeg images found for webp conversion')
                 continue
