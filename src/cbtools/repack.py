@@ -50,13 +50,13 @@ def repack(files, remove_source=False, dryrun=False, root=None, use_webp=False, 
 
         src_cfile = ComicArchive(src_path)
 
-        if use_webp:
-            if not _check_has_lossy_images(src_cfile):
-                logger.info(f'Skipping {src_path}: no jpg/jpeg images found for webp conversion')
-                continue
-            elif src_path == dst_path:
+        if use_webp and src_path == dst_path:
+            if _check_has_lossy_images(src_cfile):
                 src_path = _prepare_inplace_conversion(src_path)
                 src_cfile = ComicArchive(src_path)
+            else:
+                logger.info(f'Skipping {src_path}: no jpg/jpeg images found for webp conversion')
+                continue
 
         logger.debug(f'repack starting: {src_path} -> {dst_path}')
 

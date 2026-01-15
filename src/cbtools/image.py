@@ -62,13 +62,10 @@ def convert_to_webp(root):
             continue
 
         if img_path.suffix.lower() not in ['.jpg', '.jpeg']:
-            continue
-
-        try:
-            im = Image.open(img_path)
-            webp_path = img_path.with_suffix('.webp')
-            im.save(webp_path, 'WEBP', quality=75, method=6)
-            img_path.unlink()
-        except Exception as e:
-            logger.error(f'Failed to convert {img_path} to webp: {e}')
-
+            try:
+                im = Image.open(img_path)
+                webp_path = img_path.with_suffix('.webp')
+                im.save(webp_path, 'WEBP', quality=75, method=6)
+                img_path.unlink()
+            except Exception as e:
+                logger.error(f'Failed to convert {img_path} to webp: {e}')
