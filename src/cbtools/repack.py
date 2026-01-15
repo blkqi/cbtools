@@ -16,6 +16,31 @@ from cbtools.log import logger
 _repack_file_type = '.cbz'
 
 
+def _batch_convert_to_webp(root):
+    images = [p for ext in ('*.jpg', '*.jpeg') for p in map(Path, glob.glob(os.path.join(root, ext)))]
+
+    pool = multiprocessing.Pool(config['convert.jobs'])
+
+    try:
+        pool.map(convert_to_webp, images)
+
+    except KeyboardInterrupt:
+        print("Interrupted — terminating workers...")
+        pool.terminate()
+        pool.join()
+        sys.exit(1)
+
+    except Exception as e:
+        print(f"Worker error: {e}")
+        pool.terminate()
+        pool.join()
+        sys.exit(1)
+
+    else:
+        pool.close()
+        pool.join()
+
+
 def repack(files, remove_source=False, dryrun=False, root=None, use_webp=False, **kwds):
     for src_path in expand_paths(files):
         if src_path.suffix.lower() not in SUPPORTED_FILE_EXTENSIONS:
@@ -67,28 +92,3 @@ def repack(files, remove_source=False, dryrun=False, root=None, use_webp=False, 
             src_path.unlink()
 
         logger.debug(f'repack complete: {src_path} -> {dst_path}')
-
-
-def _batch_convert_to_webp(root):
-    images = [p for ext in ('*.jpg', '*.jpeg') for p in map(Path, glob.glob(os.path.join(root, ext)))]
-
-    pool = multiprocessing.Pool(config['convert.jobs'])
-
-    try:
-        pool.map(convert_to_webp, images)
-
-    except KeyboardInterrupt:
-        print("Interrupted — terminating workers...")
-        pool.terminate()
-        pool.join()
-        sys.exit(1)
-
-    except Exception as e:
-        print(f"Worker error: {e}")
-        pool.terminate()
-        pool.join()
-        sys.exit(1)
-
-    else:
-        pool.close()
-        pool.join()
