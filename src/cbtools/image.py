@@ -1,8 +1,11 @@
+from cbtools import configure_logging
 from cbtools.config import config
 from cbtools.functools import compose
 
 from PIL import Image, ImageOps, UnidentifiedImageError
 
+
+logger = configure_logging()
 
 # disable decompression bomb detection
 Image.MAX_IMAGE_PIXELS = None
@@ -54,3 +57,18 @@ def convert(path, root):
     _convert(Image.open(path)).save((root / path.name), config['image.format'],
                                     optimize=config['image.optimize'],
                                     quality=config['image.quality'])
+
+def convert_to_webp(root):
+    for img_path in root.rglob('*'):
+        if not img_path.is_file():
+            continue
+
+        if img_path.suffix.lower() in ['.jpg', '.jpeg']:
+            try:
+                im = Image.open(img_path)
+                webp_path = img_path.with_suffix('.webp')
+                im.save(webp_path, 'WEBP', quality=75, method=6)
+                img_path.unlink()
+            except Exception as e:
+                logger.error(f'Failed to convert {img_path} to webp: {e}')
+
