@@ -100,7 +100,7 @@ async def worker():
         logger.debug(f'Processing {path}')
 
         try:
-            repack([path], remove_source=True, dryrun=config['manager.test_mode'], use_webp=config.get('manager.force_webp', False))
+            repack([path], remove_source=True, dryrun=config['manager.test_mode'], use_webp=config['manager.force_webp'])
         except CbtoolsError as e:
             logger.error(e)
             processing_items.remove(path)

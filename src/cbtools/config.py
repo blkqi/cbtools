@@ -14,6 +14,7 @@ DEFAULT_CONFIG = {
     "manager.test_mode": False,
     "manager.library_path": "/library",
     "manager.api_port": 8080,
+    "manager.force_webp": False,
     "rename.move_includes": [".anilist.txt", "cover.jpg"],
     "rename.pattern": "${Series} (${Year})/${Series} ${Volume}",
     "tag.series_id_filename": ".anilist.txt",
