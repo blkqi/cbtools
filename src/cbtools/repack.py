@@ -21,32 +21,46 @@ def repack(files, remove_source=False, dryrun=False, root=None, use_webp=False, 
             parent = src_path.parent.name
             dst_path = Path(root) / parent / dst_path.name
 
-        if use_webp and src_path == dst_path:
-            new_src_path = src_path.with_name(src_path.stem + '_source' + src_path.suffix)
-            src_path.rename(new_src_path)
-            src_path = new_src_path
-
-        if src_path == dst_path:
+        if src_path == dst_path and not use_webp:
             continue
 
         if dryrun:
             logger.info(f'dryrun: {src_path} -> {dst_path}')
             continue
 
-        if dst_path.exists():
+        if dst_path.exists() and src_path != dst_path:
             logger.error(f'{dst_path}: already exists!')
+            return 1
+
+        src_cfile = ComicArchive(src_path)
+
+        has_jpg = False
+        if use_webp:
+            for member in src_cfile.list():
+                name = member.name.lower()
+                if name.endswith('.jpg') or name.endswith('.jpeg'):
+                    has_jpg = True
+                    break
+
+        if use_webp and not has_jpg:
+            logger.info(f'Skipping {src_path}: no jpg/jpeg images found for webp conversion')
             return 1
 
         logger.debug(f'repack starting: {src_path} -> {dst_path}')
 
-        src_cfile = ComicArchive(src_path)
+        if use_webp and src_path == dst_path:
+            new_src_path = src_path.with_name(src_path.stem + '_source' + src_path.suffix)
+            src_path.rename(new_src_path)
+            src_path = new_src_path
+            src_cfile = ComicArchive(src_path)
+
         dst_cfile = ComicArchive(dst_path, volume=src_cfile.volume)
 
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp_path = Path(tmpdir)
             src_cfile.extract_all(out_path=tmp_path)
 
-            if use_webp:
+            if use_webp and has_jpg:
                 convert_to_webp(tmp_path)
 
             dst_cfile.create(str(tmp_path / '*'))
