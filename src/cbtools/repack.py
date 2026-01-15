@@ -32,7 +32,7 @@ def repack(files, remove_source=False, dryrun=False, root=None, use_webp=False, 
 
         if dst_path.exists() and src_path != dst_path:
             logger.error(f'{dst_path}: already exists!')
-            return 1
+            continue
 
         src_cfile = ComicArchive(src_path)
 
@@ -46,7 +46,7 @@ def repack(files, remove_source=False, dryrun=False, root=None, use_webp=False, 
 
         if use_webp and not has_jpg:
             logger.info(f'Skipping {src_path}: no jpg/jpeg images found for webp conversion')
-            return 1
+            continue
 
         logger.debug(f'repack starting: {src_path} -> {dst_path}')
 
