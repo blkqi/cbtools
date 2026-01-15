@@ -125,7 +125,6 @@ async def worker():
         processing_items.remove(path)
 
 
-
 def rescan(files=None):
     body = {}
 

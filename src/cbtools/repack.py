@@ -1,9 +1,9 @@
-import glob
 import multiprocessing
 import os
 import sys
 import tempfile
 
+from glob import glob
 from pathlib import Path
 
 from cbtools import config
@@ -17,7 +17,7 @@ _repack_file_type = '.cbz'
 
 
 def _batch_convert_to_webp(root):
-    images = [p for ext in ('*.jpg', '*.jpeg') for p in map(Path, glob.glob(os.path.join(root, ext)))]
+    images = [p for ext in ('*.jpg', '*.jpeg') for p in map(Path, glob(os.path.join(root, ext)))]
 
     pool = multiprocessing.Pool(config['convert.jobs'])
 
@@ -72,7 +72,7 @@ def repack(files, remove_source=False, dryrun=False, root=None, use_webp=False, 
             if src_cfile.match(has_lossy):
                 src_cfile.rename(src_path.stem + '_source' + src_path.suffix)
             else:
-                logger.info(f'Skipping {src_path}: no jpg/jpeg images found for webp conversion')
+                logger.info(f'Skipping {src_path}: no jpg images found for webp conversion')
                 continue
 
         logger.debug(f'repack starting: {src_path} -> {dst_path}')
