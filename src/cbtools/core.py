@@ -118,9 +118,9 @@ class ComicArchive(object):
         yield from map(self._parse_member, iter(buffer))
 
     def rename(self, filename):
-        new_src_path = self.filepath.with_name(filename)
-        self.filepath.rename(new_src_path)
-        self.filepath = new_src_path
+        new_path = self.filepath.with_name(filename)
+        self.filepath.rename(new_path)
+        self.filepath = new_path
 
     def match(self, expr):
         for member in self.list():
