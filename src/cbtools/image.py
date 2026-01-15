@@ -1,11 +1,9 @@
-from cbtools import configure_logging
 from cbtools.config import config
 from cbtools.functools import compose
+from cbtools.log import logger
 
 from PIL import Image, ImageOps, UnidentifiedImageError
 
-
-logger = configure_logging()
 
 # disable decompression bomb detection
 Image.MAX_IMAGE_PIXELS = None

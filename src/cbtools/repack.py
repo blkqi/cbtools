@@ -1,6 +1,7 @@
 import tempfile
 
 from pathlib import Path
+
 from cbtools.image import convert_to_webp
 from cbtools.constants import SUPPORTED_FILE_EXTENSIONS
 from cbtools.core import ComicArchive, expand_paths
@@ -8,6 +9,7 @@ from cbtools.log import logger
 
 
 _repack_file_type = '.cbz'
+
 
 def repack(files, remove_source=False, dryrun=False, root=None, use_webp=False, **kwds):
     for src_path in expand_paths(files):
