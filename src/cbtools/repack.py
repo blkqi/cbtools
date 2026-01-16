@@ -89,7 +89,8 @@ def repack(files, remove_source=False, dryrun=False, root=None, use_webp=False, 
             if use_webp:
                 _batch_convert_to_webp(tmp_path)
 
-            dst_cfile.create(str(tmp_path / '*'))
+            files = [str(p) for p in tmp_path.iterdir()]
+            dst_cfile.create(*files)
 
         if remove_source:
             if webp_temp_path:
