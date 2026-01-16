@@ -1,3 +1,4 @@
+import abc
 import tempfile
 
 from pathlib import Path
@@ -9,6 +10,44 @@ from cbtools.log import logger
 
 
 _repack_file_type = '.cbz'
+
+
+class RepackPipeline:
+    def __init__(self, processors):
+        self._processors = processors
+
+    def run(self, src_path):
+        with tempfile.TemporaryDirectory() as tmp:
+            cfile = ComicArchive(path)
+            cfile.extract_all(out_path=tmp)
+
+            for p in self._processors:
+                p.intialize()
+
+            for p in self._processors:
+                p.process(tmp)
+
+            for p in self._processors:
+                p.finalize()
+
+
+class Processor(abc.ABC):
+    def initialize(self): pass
+    def process(self, path): pass
+    def finalize(self): pass
+
+
+class ImageTranscoder(Processor):
+    def process(self, path):
+        _batch_convert_to_webp(path)
+
+
+class ComicArchiveWriter(Processor):
+    def __init__(self, path, **kwds):
+        self._cfile = ComicArchive(path, **kwds)
+
+    def process(self, path):
+        self._cfile.create(f'{path}/*')
 
 
 def repack(files, remove_source=False, dryrun=False, root=None, use_webp=False, **kwds):
@@ -23,9 +62,6 @@ def repack(files, remove_source=False, dryrun=False, root=None, use_webp=False, 
             parent = src_path.parent.name
             dst_path = Path(root) / parent / dst_path.name
 
-        if src_path == dst_path and not use_webp:
-            continue
-
         if dryrun:
             logger.info(f'dryrun: {src_path} -> {dst_path}')
             continue
@@ -34,38 +70,15 @@ def repack(files, remove_source=False, dryrun=False, root=None, use_webp=False, 
             logger.error(f'{dst_path}: already exists!')
             continue
 
-        src_cfile = ComicArchive(src_path)
-
-        has_jpg = False
-        if use_webp:
-            for member in src_cfile.list():
-                name = member.name.lower()
-                if name.endswith('.jpg') or name.endswith('.jpeg'):
-                    has_jpg = True
-                    break
-
-        if use_webp and not has_jpg:
-            logger.info(f'Skipping {src_path}: no jpg/jpeg images found for webp conversion')
-            continue
-
         logger.debug(f'repack starting: {src_path} -> {dst_path}')
 
-        if use_webp and src_path == dst_path:
-            new_src_path = src_path.with_name(src_path.stem + '_source' + src_path.suffix)
-            src_path.rename(new_src_path)
-            src_path = new_src_path
-            src_cfile = ComicArchive(src_path)
+        processors = [
+            ImageTranscoder(),
+            ComicArchiveWriter(dst_path)
+        ]
 
-        dst_cfile = ComicArchive(dst_path, volume=src_cfile.volume)
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            tmp_path = Path(tmpdir)
-            src_cfile.extract_all(out_path=tmp_path)
-
-            if use_webp and has_jpg:
-                convert_to_webp(tmp_path)
-
-            dst_cfile.create(str(tmp_path / '*'))
+        pipeline = RepackPipeline(processors)
+        pipeline.run(src_path)
 
         if remove_source:
             src_path.unlink()
