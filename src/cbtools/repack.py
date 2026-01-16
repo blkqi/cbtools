@@ -17,7 +17,7 @@ _repack_file_type = '.cbz'
 
 
 def _batch_convert_to_webp(root):
-    images = [p for ext in ('*.jpg', '*.jpeg') for p in map(Path, glob(os.path.join(root, ext)))]
+    images = [p for ext in ('jpg', 'jpeg') for p in Path(root).rglob(f'*.{ext}')]
 
     pool = multiprocessing.Pool(config['convert.jobs'])
 
