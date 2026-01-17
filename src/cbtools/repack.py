@@ -25,13 +25,13 @@ def _batch_convert_to_webp(root):
         pool.map(convert_to_webp, images)
 
     except KeyboardInterrupt:
-        print("Interrupted — terminating workers...")
+        logger.info("Interrupted — terminating workers...")
         pool.terminate()
         pool.join()
         sys.exit(1)
 
     except Exception as e:
-        print(f"Worker error: {e}")
+        logger.error(f"Worker error: {e}")
         pool.terminate()
         pool.join()
         sys.exit(1)
