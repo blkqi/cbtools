@@ -56,17 +56,15 @@ def convert(path, root):
                                     optimize=config['image.optimize'],
                                     quality=config['image.quality'])
 
-def convert_to_webp(root):
-    for img_path in root.rglob('*'):
-        if not img_path.is_file():
-            continue
+def convert_to_webp(img_path):
+    if not img_path.is_file():
+        return
 
-        if img_path.suffix.lower() in ['.jpg', '.jpeg']:
-            try:
-                im = Image.open(img_path)
-                webp_path = img_path.with_suffix('.webp')
-                im.save(webp_path, 'WEBP', quality=75, method=6)
-                img_path.unlink()
-            except Exception as e:
-                logger.error(f'Failed to convert {img_path} to webp: {e}')
-
+    if img_path.suffix.lower() in ['.jpg', '.jpeg']:
+        try:
+            im = Image.open(img_path)
+            webp_path = img_path.with_suffix('.webp')
+            im.save(webp_path, 'WEBP', quality=config['image.quality'], method=6)
+            img_path.unlink()
+        except Exception as e:
+            logger.error(f'Failed to convert {img_path} to webp: {e}')
