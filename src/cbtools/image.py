@@ -54,7 +54,8 @@ def convert(path, root):
     _convert = compose(resize, correct_gamma, rotate_spreads, grayscale)
 
     fmt = config['image.format'].lower()
-    out_path = root / path.with_suffix(f".{fmt if fmt != 'jpeg' else 'jpg'}").name
+    ext = 'jpg' if fmt == 'jpeg' else fmt
+    out_path = root / path.with_suffix(f".{ext}").name
 
     _convert(Image.open(path)).save(out_path, config['image.format'],
                                     optimize=config['image.optimize'],
