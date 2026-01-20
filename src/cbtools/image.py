@@ -52,7 +52,11 @@ def resize(image, size=config['image.size'], color=config['image.background']):
 
 def convert(path, root):
     _convert = compose(resize, correct_gamma, rotate_spreads, grayscale)
-    _convert(Image.open(path)).save((root / path.name), config['image.format'],
+
+    fmt = config['image.format'].lower()
+    out_path = root / path.with_suffix(f".{fmt if fmt != 'jpeg' else 'jpg'}").name
+
+    _convert(Image.open(path)).save(out_path, config['image.format'],
                                     optimize=config['image.optimize'],
                                     quality=config['image.quality'])
 
