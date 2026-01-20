@@ -34,6 +34,7 @@ DEFAULT_CONFIG = {
     "image.upscale.noise": 2,
     "image.upscale.format": "jpg",
     "image.upscale.gpu": "auto",
+    "image.upscale.tile_size": 0,
 }
 
 
