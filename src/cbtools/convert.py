@@ -46,12 +46,7 @@ def _extract_all(cbx_path, src_path, flat=False):
 def _create_archive(out_path, src_path, dst_path):
     logger.info(f'Packing archive "{out_path}"')
 
-    add_paths = [str(dst_path) + '/*']
-    info_path = (src_path / COMICINFO_XML_NAME)
-    if info_path.exists():
-        add_paths = chain([info_path], add_paths)
-
-    ComicArchive(out_path).create(*add_paths)
+    ComicArchive(out_path).create(str(dst_path) + '/*')
 
     logger.info(f'Created archive "{out_path}"')
 
@@ -68,6 +63,7 @@ def _process_skips(src_path, dst_path):
 
     for path in src_path.iterdir():
         if path.name == COMICINFO_XML_NAME:
+            path.rename(dst_path / path.name)
             continue
 
         imgdim = image.size(path)
@@ -110,8 +106,7 @@ def _convert_images(src_path, dst_path):
     logger.info('Converting image data')
 
     pool = multiprocessing.Pool(config['convert.jobs'])
-    paths = (p for p in src_path.iterdir() if p.name != COMICINFO_XML_NAME)
-    pool.map(partial(image.convert, root=dst_path), paths)
+    pool.map(partial(image.convert, root=dst_path), src_path.iterdir())
 
 
 def convert(files, root, delete_source=False, **kwds):
