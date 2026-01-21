@@ -35,6 +35,7 @@ DEFAULT_CONFIG = {
     "image.upscale.format": "jpg",
     "image.upscale.gpu": "auto",
     "image.upscale.tile_size": 0,
+    "image.upscale.thread_count": "1:2:2",
 }
 
 

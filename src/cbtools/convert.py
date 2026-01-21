@@ -94,7 +94,8 @@ def _upscale_images(src_path, dst_path):
            '-n', str(config['image.upscale.noise']),
            '-f', str(config['image.upscale.format']),
            '-g', str(config['image.upscale.gpu']),
-           '-t', str(config['image.upscale.tile_size'])]
+           '-t', str(config['image.upscale.tile_size']),
+           '-j', str(config['image.upscale.thread_count'])]
 
     try:
         proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
