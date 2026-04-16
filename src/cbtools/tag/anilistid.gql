@@ -1,5 +1,5 @@
-query search_details_by_series_id ($series_id: Int, $format: MediaFormat) {
-  Media (id: $series_id, type: MANGA, format: $format) {
+query search_details_by_series_id ($series_id: Int) {
+  Media (id: $series_id, type: MANGA) {
     id
     volumes
     siteUrl
