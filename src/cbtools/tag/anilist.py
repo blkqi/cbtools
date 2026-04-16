@@ -47,11 +47,9 @@ class AniList:
 
     @lru_cache(1)
     def search(self, series_id):
-        media_format = 'MANGA'
         query = importlib.resources.files(__name__).joinpath('anilistid.gql').open().read()
         variables = {
             'series_id': series_id,
-            'format': media_format
         }
 
         response = self.session.post(self.api_url, json={'query': query, 'variables': variables})
