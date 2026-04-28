@@ -22,6 +22,6 @@ class SubprocessError(CbtoolsError):
     """Raised when a subprocess command fails."""
     pass
 
-class AnilistEntryNotFound(CbtoolsError):
-    """Raised when a requested entry is not found on AniList."""
+class AnilistApiError(CbtoolsError):
+    """Raised when an error occurs while interacting with the AniList API."""
     pass
