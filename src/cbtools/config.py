@@ -36,6 +36,7 @@ DEFAULT_CONFIG = {
     "image.upscale.gpu": "auto",
     "image.upscale.tile_size": 0,
     "image.upscale.thread_count": "1:2:2",
+    "stitch.spread_probability": 0.5,
 }
 
 
