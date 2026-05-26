@@ -13,5 +13,5 @@ setup(name='cbtools',
       package_data={'cbtools': ['*.xsd'], 'cbtools.tag': ['*.gql']},
       packages=packages,
       scripts=['bin/cb', 'bin/cbinfo', 'bin/cbrename', 'bin/cbtag', 'bin/cbscale', 'bin/cbconvert', 'bin/cbmanager'],
-      install_requires=['lxml', 'jmespath', 'requests', 'dictdiffer', 'waitress', 'flask', 'watchdog', 'Pillow>=6.2.2'],
+      install_requires=['lxml', 'jmespath', 'requests', 'dictdiffer', 'waitress', 'flask', 'watchdog', 'Pillow>=6.2.2', 'numpy'],
       license_files=['LICENSE'],)
