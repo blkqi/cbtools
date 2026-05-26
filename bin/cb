@@ -58,6 +58,8 @@ def parse_args(argv=sys.argv):
         parser.add_argument('files', nargs='+', type=Path)
         parser.add_argument('--path', dest='root', type=Path)
         parser.add_argument('-d', '--delete-source', action='store_true', help='Delete source files after processing')
+        parser.add_argument('--join-spreads', dest='join_spreads', action='store_true',
+                            help='Detect and join facing-page spreads (before rotation)')
         parser.set_defaults(command=convert)
 
     def add_manager_parser(subparsers):

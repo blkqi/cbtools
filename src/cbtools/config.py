@@ -36,6 +36,14 @@ DEFAULT_CONFIG = {
     "image.upscale.gpu": "auto",
     "image.upscale.tile_size": 0,
     "image.upscale.thread_count": "1:2:2",
+    "stitch.skip_pages": 1,
+    "stitch.ribbon_fraction": 0.018,
+    "stitch.ribbon_min_px": 12,
+    "stitch.ribbon_max_px": 64,
+    "stitch.correlation_threshold": 0.45,
+    "stitch.min_content_density": 0.06,
+    "stitch.white_pixel_value": 240,
+    "stitch.min_edge_contrast": 8.5,
 }
 
 
