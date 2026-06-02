@@ -12,6 +12,7 @@ from cbtools.config import config
 from cbtools.functools import partial, chain
 from cbtools.constants import COMICINFO_XML_NAME
 from cbtools.exceptions import MissingDependencyError, SubprocessError
+from cbtools.stitch import join_spreads as _join_spreads
 
 
 WAIFU2X_BIN = os.getenv('WAIFU2X_BIN', '/usr/bin/waifu2x-ncnn-vulkan')
@@ -115,7 +116,7 @@ def _convert_images(src_path, dst_path):
     pool.map(partial(image.convert, root=dst_path), paths)
 
 
-def convert(files, root, delete_source=False, **kwds):
+def convert(files, root, delete_source=False, join_spreads=False, spread_probability=None, model_name=None, **kwds):
     for cbx_path in expand_paths(files):
         with tempfile.TemporaryDirectory() as tmp_dir:
 
@@ -132,6 +133,13 @@ def convert(files, root, delete_source=False, **kwds):
 
             _extract_all(cbx_path, ext_path, flat=True)
             _upscale_images(ext_path, ups_path)
+            if join_spreads:
+                kw = {}
+                if spread_probability is not None:
+                    kw['threshold'] = spread_probability
+                if model_name is not None:
+                    kw['model_name'] = model_name
+                _join_spreads(ups_path, **kw)
             _convert_images(ups_path, cnv_path)
             _create_archive(out_path, ext_path, cnv_path)
 
