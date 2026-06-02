@@ -13,7 +13,6 @@ from cbtools.functools import partial, chain
 from cbtools.constants import COMICINFO_XML_NAME
 from cbtools.exceptions import MissingDependencyError, SubprocessError
 from cbtools.stitch import join_spreads as _join_spreads
-from cbtools.epub import reorder_extracted as _reorder_extracted
 
 
 WAIFU2X_BIN = os.getenv('WAIFU2X_BIN', '/usr/bin/waifu2x-ncnn-vulkan')
@@ -133,7 +132,6 @@ def convert(files, root, delete_source=False, join_spreads=False, spread_probabi
             (cnv_path := (tmp_path / 'convert')).mkdir()
 
             _extract_all(cbx_path, ext_path, flat=True)
-            _reorder_extracted(ext_path, cbx_path)
             _upscale_images(ext_path, ups_path)
             if join_spreads:
                 kw = {}
