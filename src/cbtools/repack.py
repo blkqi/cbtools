@@ -58,14 +58,16 @@ def repack(files, remove_source=False, dryrun=False, root=None, use_webp=False, 
 
         src_cfile = ComicArchive(src_path)
         webp_temp_path = False
+        do_webp = use_webp
 
-        if use_webp:
+        if do_webp:
             has_lossy = lambda m: m.name.lower().endswith(('.jpg', '.jpeg'))
 
             if not src_cfile.match(has_lossy):
-                if dst_path.suffix.lower() == _repack_file_type:
+                if src_path == dst_path:
                     logger.info(f'Skipping {src_path}: no jpg images found for webp conversion')
                     continue
+                do_webp = False
             elif src_path == dst_path:
                 dst_path = src_path.with_name(dst_path.stem + '_webp' + dst_path.suffix)
                 webp_temp_path = True
@@ -86,7 +88,7 @@ def repack(files, remove_source=False, dryrun=False, root=None, use_webp=False, 
             tmp_path = Path(tmpdir)
             src_cfile.extract_all(out_path=tmp_path)
 
-            if use_webp:
+            if do_webp:
                 _batch_convert_to_webp(tmp_path)
 
             files = [str(p) for p in tmp_path.iterdir()]
