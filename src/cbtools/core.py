@@ -147,7 +147,7 @@ class ComicArchive(object):
         self._add(arcname, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, input=data)
 
     def _list(self, **kwds):
-        return _subprocess_run(['7z', 'l', str(self.filepath), '-ba'], **kwds)
+        return _subprocess_run(['7z', 'l', str(self.filepath), '-ba', '-sccUTF-8'], **kwds)
 
     def _create(self, *args, **kwds):
         return _subprocess_run(['7z', 'a', str(self.filepath), *args, *self._args, f'-t{self._type}'], **kwds)
@@ -163,7 +163,7 @@ class ComicArchive(object):
 
     def _parse_member(self, line):
         info, name = (line[:self._member_name_offset], line[self._member_name_offset:])
-        args = (x.decode().strip() for x in (name, *self._member_struct.unpack_from(info)))
+        args = (x.decode(errors='replace').strip() for x in (name, *self._member_struct.unpack_from(info)))
         return ComicArchiveMember(*args)
 
 
