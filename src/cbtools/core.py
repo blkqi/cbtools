@@ -69,6 +69,14 @@ class ComicArchive(object):
         'cbr': 'rar',
         'cb7': '7z',
     }
+    _magic_signatures = (
+        (b'PK\x03\x04', 'zip'),
+        (b'PK\x05\x06', 'zip'),
+        (b'PK\x07\x08', 'zip'),
+        (b'Rar!\x1a\x07\x00', 'rar'),
+        (b'Rar!\x1a\x07\x01\x00', 'rar'),
+        (b'7z\xbc\xaf\x27\x1c', '7z'),
+    )
 
     def __init__(self, filepath, filetype=None, volume=None):
         self.filepath = filepath
@@ -77,6 +85,17 @@ class ComicArchive(object):
         self.volume = volume or str(float(self._parse_volume())).removesuffix('.0')
 
     def _file_type(self):
+        if self.filepath.is_file():
+            try:
+                with open(self.filepath, 'rb') as f:
+                    header = f.read(8)
+            except OSError:
+                header = b''
+
+            for magic, filetype in self._magic_signatures:
+                if header.startswith(magic):
+                    return filetype
+
         ext = self.filepath.suffix.lower().strip('.')
         try:
             return next(y for x, y in self._allowed_file_exts.items() if ext in (x, y))
@@ -147,16 +166,16 @@ class ComicArchive(object):
         self._add(arcname, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, input=data)
 
     def _list(self, **kwds):
-        return _subprocess_run(['7z', 'l', str(self.filepath), '-ba', '-sccUTF-8'], **kwds)
+        return _subprocess_run(['7z', 'l', str(self.filepath), f'-t{self._type}', '-ba', '-sccUTF-8'], **kwds)
 
     def _create(self, *args, **kwds):
         return _subprocess_run(['7z', 'a', str(self.filepath), *args, *self._args, f'-t{self._type}'], **kwds)
 
     def _extract(self, arcname, **kwds):
-        return _subprocess_run(['7z', 'x', str(self.filepath), arcname, *self._args, '-so'], **kwds)
+        return _subprocess_run(['7z', 'x', str(self.filepath), arcname, *self._args, f'-t{self._type}', '-so'], **kwds)
 
     def _extract_all(self, out_path, **kwds):
-        return _subprocess_run(['7z', 'x', str(self.filepath), f'-o{out_path}', *self._args], **kwds)
+        return _subprocess_run(['7z', 'x', str(self.filepath), f'-o{out_path}', *self._args, f'-t{self._type}'], **kwds)
 
     def _add(self, arcname, **kwds):
         return _subprocess_run(['7z', 'a', str(self.filepath), *self._args, f'-t{self._type}', f'-si{arcname}'], **kwds)
