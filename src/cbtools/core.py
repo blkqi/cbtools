@@ -74,7 +74,7 @@ class ComicArchive(object):
         (b'PK\x05\x06', 'zip'),
         (b'PK\x07\x08', 'zip'),
         (b'Rar!\x1a\x07\x00', 'rar'),
-        (b'Rar!\x1a\x07\x01\x00', 'rar'),
+        (b'Rar!\x1a\x07\x01\x00', 'rar5'),
         (b'7z\xbc\xaf\x27\x1c', '7z'),
     )
 
