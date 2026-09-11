@@ -45,6 +45,10 @@ class AniList:
         self.session.mount('http://', adapter)
         self.session.mount('https://', adapter)
 
+        token = config['tag.anilist_token']
+        if token:
+            self.session.headers['Authorization'] = f'Bearer {token}'
+
     @lru_cache(1)
     def search(self, series_id):
         query = importlib.resources.files(__name__).joinpath('anilistid.gql').open().read()
@@ -53,6 +57,12 @@ class AniList:
         }
 
         response = self.session.post(self.api_url, json={'query': query, 'variables': variables})
+
+        # Token expired/invalid: drop it and retry anonymously.
+        if response.status_code == 401 and 'Authorization' in self.session.headers:
+            logger.warning('AniList token expired or invalid, falling back to anonymous access.')
+            del self.session.headers['Authorization']
+            response = self.session.post(self.api_url, json={'query': query, 'variables': variables})
 
         try:
             response.raise_for_status()
