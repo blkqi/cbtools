@@ -2,6 +2,7 @@ import time
 import requests
 import jmespath
 import importlib.resources
+import os
 
 from functools import lru_cache
 
@@ -45,7 +46,7 @@ class AniList:
         self.session.mount('http://', adapter)
         self.session.mount('https://', adapter)
 
-        token = config['tag.anilist_token']
+        token = os.getenv('ANILIST_TOKEN')
         if token:
             self.session.headers['Authorization'] = f'Bearer {token}'
 

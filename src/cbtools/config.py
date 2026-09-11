@@ -20,7 +20,6 @@ DEFAULT_CONFIG = {
     "tag.series_id_filename": ".anilist.txt",
     "tag.write_series_id_file": False,
     "tag.extensions": [],
-    "tag.anilist_token": "",
     "convert.suffix": "converted",
     "convert.jobs": 16,
     "image.size": (1860, 2480),
