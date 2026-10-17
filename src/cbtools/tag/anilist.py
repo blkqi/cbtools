@@ -27,7 +27,7 @@ class AniListAdapter(requests.adapters.HTTPAdapter):
 
     def _throttle(self, response):
         if response.status_code == 429:
-            self._wait(int(response.headers['Retry-After']))
+            self._wait(int(response.headers.get('Retry-After', 60)))
             return True
         else:
             return False
