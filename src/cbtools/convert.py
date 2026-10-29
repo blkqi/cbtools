@@ -77,7 +77,11 @@ def _process_skips(src_path, dst_path):
             logger.debug(f'skip: image not recognized: "{path.name}"')
             continue
 
-        if (factor * imgdim[1]) > (cutoff * devdim[1]):
+        oriented_dim = imgdim[::-1] if imgdim[0] > imgdim[1] else imgdim
+        if all(actual >= target for actual, target in zip(oriented_dim, devdim)):
+            logger.info(f'skip upscale: image already meets target size: "{path.name}"')
+            path.rename(dst_path / path.name)
+        elif (factor * imgdim[1]) > (cutoff * devdim[1]):
             logger.debug(f'skip: image dimension exceeds cutoff: "{path.name}"')
             path.rename(dst_path / path.name)
 
@@ -86,6 +90,10 @@ def _upscale_images(src_path, dst_path):
     logger.info('Upscaling image data')
 
     _process_skips(src_path, dst_path)
+
+    if not any(path.name != COMICINFO_XML_NAME and path.is_file() and image.size(path)
+               for path in src_path.iterdir()):
+        return
 
     cmd = [WAIFU2X_BIN,
            '-m', WAIFU2X_MODEL,
@@ -104,7 +112,7 @@ def _upscale_images(src_path, dst_path):
         raise MissingDependencyError(f'waifu2x-ncnn-vulkan not found: {WAIFU2X_BIN}')
 
     if proc.returncode != 0:
-        sys.stderr.write(proc.stdout.decode())
+        sys.stderr.write(proc.stdout.decode(errors='replace'))
         raise SubprocessError(f'waifu2x-ncnn-vulkan error code: {proc.returncode}')
 
 
