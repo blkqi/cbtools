@@ -11,7 +11,8 @@ Image.MAX_IMAGE_PIXELS = None
 
 def size(path):
     try:
-        return Image.open(path).size
+        with Image.open(path) as img:
+            return img.size
     except UnidentifiedImageError:
         return None
 
