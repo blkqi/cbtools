@@ -31,7 +31,7 @@ processing_items = set()
 
 class LibraryHandler(PatternMatchingEventHandler):
     def __init__(self):
-        patterns = [f'*.{ext}' for ext in list(ComicArchive._allowed_file_exts.keys()) + ['txt']]
+        patterns = [f'**/*.{ext}' for ext in list(ComicArchive._allowed_file_exts.keys()) + ['txt']]
 
         super().__init__(patterns=patterns, ignore_patterns=[], ignore_directories=True, case_sensitive=False)
 
