@@ -4,10 +4,11 @@ import requests
 import time
 import threading
 
+from glob import escape
 from pathlib import Path
 from waitress import serve
 from watchdog.observers import Observer
-from watchdog.events import PatternMatchingEventHandler, FileSystemEvent
+from watchdog.events import PatternMatchingEventHandler, FileCreatedEvent, FileModifiedEvent, FileMovedEvent
 
 from cbtools.log import logger
 from cbtools.config import config
@@ -31,13 +32,18 @@ processing_items = set()
 
 class LibraryHandler(PatternMatchingEventHandler):
     def __init__(self):
-        patterns = [f'**/*.{ext}' for ext in list(ComicArchive._allowed_file_exts.keys()) + ['txt']]
+        patterns = [f'**/*.{ext}' for ext in ComicArchive._allowed_file_exts]
+        patterns.append(f'**/{escape(config["tag.series_id_filename"])}')
 
         super().__init__(patterns=patterns, ignore_patterns=[], ignore_directories=True, case_sensitive=False)
 
     def on_created(self, event):
-        path = Path(event.src_path)
+        self._handle_new_file(Path(event.src_path))
 
+    def on_moved(self, event):
+        self._handle_new_file(Path(event.dest_path))
+
+    def _handle_new_file(self, path):
         if path.parent in processing_items:
             return
 
@@ -158,8 +164,14 @@ def manager():
 
     handler = LibraryHandler()
     observer = Observer()
-    observer.schedule(handler, path=config['manager.library_path'], recursive=True)
+    observer.schedule(
+        handler,
+        path=config['manager.library_path'],
+        recursive=True,
+        event_filter=[FileCreatedEvent, FileModifiedEvent, FileMovedEvent],
+    )
     observer.start()
+    logger.info('Watcher ready: monitoring %s recursively', config['manager.library_path'])
     thread = threading.Thread(target=serve, args=(app,), kwargs={'host': '0.0.0.0', 'port': config['manager.api_port']}, daemon=True)
     thread.start()
 
