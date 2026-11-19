@@ -1,0 +1,13 @@
+*
+!bin/
+!bin/**
+!src/
+!src/**
+!setup.py
+!LICENSE
+!docker-entrypoint.sh
+**/__pycache__/
+**/*.py[cod]
+**/*.egg-info/
+**/.env
+**/.env.*

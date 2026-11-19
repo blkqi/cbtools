@@ -1,6 +1,7 @@
 import shutil
 import string
 import unicodedata
+import errno
 
 from pathlib import Path
 from operator import itemgetter
@@ -10,6 +11,7 @@ from cbtools.log import logger
 from cbtools.core import ComicArchive, expand_paths
 from cbtools.config import config
 from cbtools.functools import unique, not_unique, compose, normalizable
+from cbtools.activity import StageIssue, StageResult
 
 
 _allowed_symbols = " _-~.'!@#$%^&()[]{}"
@@ -57,27 +59,36 @@ def _format_segments(cinfo):
     return {key: fun(cinfo) for key, fun in _formatters()}
 
 
-def _name_from_info(cinfo):
-    template = string.Template(config['rename.pattern'])
+def _name_from_info(cinfo, settings=None):
+    settings = config if settings is None else settings
+    template = string.Template(settings['rename.pattern'])
     segments = _format_segments(cinfo)
     return template.substitute(**segments).strip()
 
 
-def _construct_rename_pairs(paths, *, root):
+def _construct_rename_pairs(paths, *, root, settings=None, issues=None):
     for src in paths:
         cinfo = ComicArchive(src).info()
         if cinfo:
-            dst = Path(root) / (_name_from_info(cinfo) + src.suffix)
+            dst = Path(root) / (_name_from_info(cinfo, settings) + src.suffix)
             if src != dst:
                 yield src, dst
             else:
                 logger.debug(f'Source {src} and destination are the same - skipping rename')
         else:
-            logger.warning(f'File "{src}" contains no info xml - skipping rename')
+            message = f'File "{src}" contains no info xml - skipping rename'
+            if issues is None:
+                logger.warning(message)
+            else:
+                issues.append(StageIssue("METADATA_MISSING", message, "Check tagging and rescan the folder."))
 
 
-def _construct_rename_extra(parents):
-    for inc in config['rename.move_includes']:
+def _construct_rename_extra(parents, settings=None, *, preserve_series_id=False):
+    settings = config if settings is None else settings
+    includes = set(settings['rename.move_includes'])
+    if preserve_series_id:
+        includes.add(settings['tag.series_id_filename'])
+    for inc in includes:
         for src, dst in parents:
             if (src / inc).exists():
                 yield (src / inc, dst / inc)
@@ -101,40 +112,77 @@ def _rename_file(src, dst):
     src.unlink()
 
 
-def _check_errors(pairs):
+def _check_errors(pairs, details=None):
+    def record(message):
+        if details is None:
+            logger.error(message)
+        else:
+            details.append(message)
+
     def log_missing(src):
-        logger.error(f'Source {src} doesn\'t exist!')
+        record(f'Source {src} doesn\'t exist!')
         return src
 
     def log_replace(dst):
-        logger.error(f'Destination {dst} already exists!')
+        record(f'Destination {dst} already exists!')
         return dst
 
     def log_collide(dst):
-        logger.error(f'More than one file would be renamed to {dst}!')
+        record(f'More than one file would be renamed to {dst}!')
         return dst
+
+    def log_reuse(src):
+        record(f'Source {src} has more than one destination!')
+        return src
 
     gen_missing = unique(sorted(src for src, _ in pairs if not src.exists()))
     gen_replace = unique(sorted(dst for _, dst in pairs if dst.exists()))
     gen_collide = not_unique(sorted(dst for _, dst in pairs))
+    gen_reused = not_unique(sorted(src for src, _ in pairs))
 
     errors = chain(map(log_missing, gen_missing),
                    map(log_replace, gen_replace),
-                   map(log_collide, gen_collide))
+                   map(log_collide, gen_collide),
+                   map(log_reuse, gen_reused))
 
     return any(list(errors))
 
 
-def rename(files, root=Path(''), dryrun=False):
-    paths = expand_paths(files)
-    pairs = set(_construct_rename_pairs(paths, root=root))
+def rename(files, root=Path(''), dryrun=False, *, settings=None, reporter=None, enforce_root=False):
+    settings = config if settings is None else settings
+    paths = list(expand_paths(files))
+    issues = [] if reporter is not None else None
+    pairs = set(_construct_rename_pairs(paths, root=root, settings=settings, issues=issues))
+    if issues:
+        return StageResult(failed=len(paths), issues=issues)
 
-    if _check_errors(pairs) and not dryrun:
-        return
+    errors = [] if reporter is not None else None
+    if _check_errors(pairs, errors) and (not dryrun or reporter is not None):
+        if reporter is None:
+            return
+        return StageResult(failed=len(pairs), issues=[StageIssue(
+            "RENAME_CONFLICT", "; ".join(errors)[:1000],
+            "Resolve the source/destination naming conflict, then rescan the folder.",
+        )])
 
     parents = set((src.parent, dst.parent) for src, dst in pairs if src.parent != dst.parent)
-    extra = set(_construct_rename_extra(parents))
+    extra = set(_construct_rename_extra(parents, settings, preserve_series_id=reporter is not None))
     union = pairs.union(extra)
+    if reporter is not None:
+        extra_errors = []
+        if _check_errors(union, extra_errors):
+            return StageResult(failed=len(pairs), issues=[StageIssue(
+                "RENAME_CONFLICT", "; ".join(extra_errors)[:1000],
+                "Resolve the archive/sidecar destination conflict, then rescan the folder.",
+            )])
+    root = Path(root).resolve()
+    if enforce_root and any(not path.resolve().is_relative_to(root) for pair in union for path in pair):
+        return StageResult(failed=len(pairs), issues=[StageIssue(
+            "UNSAFE_PATH", "A rename would leave the configured library.",
+            "Correct the rename pattern or sidecar paths before rescanning.",
+        )])
+    if reporter is not None:
+        reporter.moving(dst.parent for _, dst in union)
 
     for src, dst in sorted(union, key=itemgetter(1)):
         if dryrun:
@@ -142,11 +190,27 @@ def rename(files, root=Path(''), dryrun=False):
         else:
             _rename_file(src, dst)
 
+    result = StageResult(changed=len(pairs), unchanged=len(paths) - len(pairs),
+                         outputs=[str(dst) for _, dst in sorted(pairs, key=itemgetter(1))])
+    if dryrun:
+        return result if reporter is not None else None
+
     for src, _ in parents:
+        if enforce_root and src.resolve() == root:
+            continue
+        if reporter is not None:
+            try:
+                src.rmdir()
+            except OSError as error:
+                if error.errno not in (errno.ENOTEMPTY, errno.EEXIST):
+                    logger.warning('Failed to remove empty directory %s: %s', src, error)
+            continue
         try:
             next(f for f in src.iterdir() if not f.name.startswith('.'))
         except StopIteration:
             try:
                 shutil.rmtree(src)
-            except Exception:
+            except OSError:
                 logger.warning(f'Failed to remove directory: {src}')
+
+    return result if reporter is not None else None
