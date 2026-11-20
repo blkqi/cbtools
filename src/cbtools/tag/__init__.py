@@ -3,7 +3,8 @@ from cbtools.core import ComicArchive, expand_paths
 from cbtools.config import config
 from cbtools.constants import COMICINFO_XML_NAME
 from cbtools.exceptions import InvalidArgumentError
-from cbtools.tag.anilist import AniList
+from cbtools.anilist import AniList
+from cbtools.tag.anilist import AniListMetadata
 from cbtools.activity import StageResult
 
 
@@ -48,7 +49,7 @@ def _fetch_comic_info(client, path, series_id=None, dryrun=False, settings=None)
     if not dryrun:
         _write_series_id(path.parent, series_id, settings)
 
-    return client.search(series_id).to_cinfo()
+    return AniListMetadata(client.search(series_id), settings=settings, reporter=client.reporter).to_cinfo()
 
 
 def _tag_comic(path, cinfo, dryrun=False, quiet=False):
@@ -74,7 +75,7 @@ def _tag_comic(path, cinfo, dryrun=False, quiet=False):
 
 def tag(files, series_id=None, dryrun=False, *, settings=None, reporter=None):
     settings = config if settings is None else settings
-    client = AniList(settings=settings, reporter=reporter)
+    client = AniList(reporter=reporter)
     result = StageResult()
     for path in expand_paths(files):
         resolved_id = series_id or _get_series_id(path, settings)

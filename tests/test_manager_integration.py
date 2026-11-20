@@ -17,7 +17,7 @@ from waitress import create_server
 from watchdog.observers import Observer
 
 from cbtools.activity import StageResult
-from cbtools.anilist_auth import AniListAuthError
+from cbtools.anilist.auth import AniListAuthError
 from cbtools.config import DEFAULT_CONFIG
 from cbtools.manager import LibraryHandler, count_queued_archives, process_job
 from cbtools.manager.api import create_app
@@ -26,7 +26,7 @@ from cbtools.manager.settings import SettingsStore
 from cbtools.rename import rename
 from cbtools.repack import repack
 from cbtools.tag import tag
-from cbtools.tag.anilist import AniListAdapter
+from cbtools.anilist.client import AniListAdapter
 
 
 class ManagerIntegrationTests(unittest.TestCase):
@@ -130,7 +130,7 @@ class ManagerIntegrationTests(unittest.TestCase):
             waiting.append(self.runtime.snapshot()["jobs"][job_id])
 
         request = requests.Request("POST", "https://graphql.anilist.co").prepare()
-        with patch.object(requests.adapters.HTTPAdapter, "send", side_effect=[limited, accepted]) as send, patch("cbtools.tag.anilist.time.sleep", side_effect=sleep) as delay:
+        with patch.object(requests.adapters.HTTPAdapter, "send", side_effect=[limited, accepted]) as send, patch("cbtools.anilist.client.time.sleep", side_effect=sleep) as delay:
             self.assertIs(adapter.send(request), accepted)
         self.assertEqual(send.call_count, 2)
         delay.assert_called_once_with(3600)
@@ -228,7 +228,9 @@ class ManagerIntegrationTests(unittest.TestCase):
         }}}
         response = Mock(status_code=200)
         response.json.return_value = payload
-        with patch("cbtools.tag.anilist.requests.Session.post", return_value=response) as post:
+        with patch("cbtools.anilist.client.requests.Session.post", return_value=response) as post, patch(
+            "cbtools.anilist.client.anilist_auth.token", return_value=None,
+        ):
             job_id = self.run_job(series)
             self.assertEqual(post.call_count, 1)
             output = self.library / "Example Series (2020)"

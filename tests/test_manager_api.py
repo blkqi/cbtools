@@ -7,7 +7,7 @@ from pathlib import Path
 from unittest.mock import patch
 from urllib.parse import parse_qs, urlsplit
 
-from cbtools.anilist_auth import AniListAuth
+from cbtools.anilist.auth import AniListAuth
 from cbtools.activity import StageIssue
 from cbtools.config import DEFAULT_CONFIG
 from cbtools.manager.api import create_app
@@ -56,7 +56,7 @@ class APITests(unittest.TestCase):
                 "Sec-Fetch-Site": "cross-site", "Sec-Fetch-Mode": "navigate",
                 "Sec-Fetch-Dest": "document",
             }
-            with patch("cbtools.anilist_auth.requests.post", side_effect=[
+            with patch("cbtools.anilist.auth.requests.post", side_effect=[
                 response({"access_token": "fixture-access-token", "expires_in": 3600}),
                 response({"data": {"Viewer": {"id": 7, "name": "FixtureAccount"}}}),
             ]) as post:
@@ -94,7 +94,7 @@ class APITests(unittest.TestCase):
             start = self.post("/api/v1/anilist/connect")
             self.assertIn("Secure", start.headers["Set-Cookie"])
             state = parse_qs(urlsplit(start.json["url"]).query)["state"][0]
-            with patch("cbtools.anilist_auth.requests.post", return_value=response({
+            with patch("cbtools.anilist.auth.requests.post", return_value=response({
                 "message": "fixture-secret", "access_token": "fixture-secret",
             }, 401)):
                 failed = self.client.get("/api/v1/anilist/callback?code=fixture-code&state=" + state)

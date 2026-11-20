@@ -4,13 +4,15 @@ import tempfile
 import unittest
 
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 from urllib.parse import parse_qs, urlsplit
 
 import requests
 
-from cbtools.anilist_auth import AniListAuth, AniListAuthError
-from cbtools.tag.anilist import AniList
+from cbtools.anilist.auth import AniListAuth, AniListAuthError
+from cbtools.anilist import AniList
+from cbtools.exceptions import AnilistApiError
+from cbtools.tag import _fetch_comic_info
 
 
 def response(value, status=200):
@@ -42,7 +44,7 @@ class AniListAuthTests(unittest.TestCase):
 
     def connect(self, token="fixture-access-token"):
         _, state, _ = self.auth.begin()
-        with patch("cbtools.anilist_auth.requests.post", side_effect=[
+        with patch("cbtools.anilist.auth.requests.post", side_effect=[
             response({"access_token": token, "expires_in": 3600}),
             response({"data": {"Viewer": {"id": 7, "name": "FixtureAccount"}}}),
         ]) as post:
@@ -62,7 +64,7 @@ class AniListAuthTests(unittest.TestCase):
         self.assertEqual(restored.token(), "fixture-access-token")
         if os.name != "nt":
             self.assertEqual(self.auth.path.stat().st_mode & 0o777, 0o600)
-        with patch("cbtools.anilist_auth.requests.post") as repeat:
+        with patch("cbtools.anilist.auth.requests.post") as repeat:
             with self.assertRaises(AniListAuthError):
                 self.auth.complete(state, state, "fixture-code")
             repeat.assert_not_called()
@@ -72,7 +74,7 @@ class AniListAuthTests(unittest.TestCase):
         self.assertTrue(secure)
         self.assertEqual(parse_qs(urlsplit(url).query)["state"], [state])
         self.assertNotIn(OAUTH_ENV["ANILIST_CLIENT_SECRET"], url)
-        with patch("cbtools.anilist_auth.requests.post") as post:
+        with patch("cbtools.anilist.auth.requests.post") as post:
             for browser_state in ("", "another-browser", "\N{SNOWMAN}"):
                 with self.subTest(browser_state=browser_state), self.assertRaises(AniListAuthError):
                     self.auth.complete(state, browser_state, "fixture-code")
@@ -97,7 +99,7 @@ class AniListAuthTests(unittest.TestCase):
         for results in fixtures:
             with self.subTest(results=len(results)):
                 _, state, _ = self.auth.begin()
-                with patch("cbtools.anilist_auth.requests.post", side_effect=results):
+                with patch("cbtools.anilist.auth.requests.post", side_effect=results):
                     with self.assertRaises(AniListAuthError) as error:
                         self.auth.complete(state, state, "fixture-code")
                 self.assertNotIn("fixture-access-token", str(error.exception))
@@ -107,7 +109,7 @@ class AniListAuthTests(unittest.TestCase):
     def test_failed_atomic_save_does_not_replace_active_or_persisted_credentials(self):
         self.connect()
         before = self.auth.path.read_bytes()
-        with patch("cbtools.anilist_auth.os.replace", side_effect=PermissionError("fixture failure")):
+        with patch("cbtools.anilist.auth.os.replace", side_effect=PermissionError("fixture failure")):
             with self.assertRaisesRegex(AniListAuthError, "Could not save"):
                 self.connect("replacement")
         self.assertEqual(self.auth.token(), "fixture-access-token")
@@ -123,7 +125,7 @@ class AniListAuthTests(unittest.TestCase):
                 return response({"access_token": "fixture-access-token", "expires_in": 3600})
             return response({"data": {"Viewer": {"id": 7, "name": "FixtureAccount"}}})
 
-        with patch("cbtools.anilist_auth.requests.post", side_effect=exchange):
+        with patch("cbtools.anilist.auth.requests.post", side_effect=exchange):
             with self.assertRaisesRegex(AniListAuthError, "changed during"):
                 self.auth.complete(state, state, "fixture-code")
         self.assertIsNone(self.auth.token())
@@ -163,10 +165,36 @@ class AniListAuthTests(unittest.TestCase):
                 with self.assertRaises(AniListAuthError):
                     self.auth.begin()
 
+    def test_cached_metadata_uses_each_tagging_settings_snapshot(self):
+        payload = {"data": {"Media": {
+            "id": 7, "title": {"romaji": "Example Series", "english": "Example English"},
+            "siteUrl": "https://anilist.co/manga/7", "volumes": 2, "averageScore": 84,
+            "startDate": {"year": 2020}, "genres": [], "tags": [],
+            "staff": {"edges": []}, "studios": {"edges": []},
+        }}}
+        with patch("cbtools.anilist.client.anilist_auth", self.auth):
+            client = AniList(reporter=Mock())
+        self.addCleanup(client.session.close)
+        with patch.object(client.session, "post", return_value=response(payload)) as post:
+            first = _fetch_comic_info(client, self.root / "V1.cbz", 7, dryrun=True,
+                                     settings={"tag.extensions": ["community_rating", "localized_series"]})
+            self.assertEqual(first["Series"], "Example Series")
+            self.assertEqual(first["Count"], "2")
+            self.assertEqual(first["CommunityRating"], "4.2")
+            self.assertEqual(first["LocalizedSeries"], "Example English")
+            second = _fetch_comic_info(client, self.root / "V2.cbz", 7, dryrun=True,
+                                      settings={"tag.extensions": []})
+            self.assertNotIn("CommunityRating", second)
+            self.assertNotIn("LocalizedSeries", second)
+            with self.assertRaisesRegex(AnilistApiError, "tagging extension"):
+                _fetch_comic_info(client, self.root / "V3.cbz", 7, dryrun=True,
+                                 settings={"tag.extensions": ["missing_extension"]})
+            post.assert_called_once()
+
     def test_tagging_uses_saved_credentials_and_a_rejected_token_becomes_anonymous(self):
         self.connect()
         unauthorized = response({}, 401)
-        with patch("cbtools.tag.anilist.anilist_auth", self.auth):
+        with patch("cbtools.anilist.client.anilist_auth", self.auth):
             client = AniList()
             self.assertEqual(client.session.headers["Authorization"], "Bearer fixture-access-token")
             with patch.object(client.session, "post", side_effect=[

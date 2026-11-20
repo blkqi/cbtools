@@ -16,7 +16,7 @@ from cbtools.log import logger
 from cbtools.manager.queue import manager_queue
 from cbtools.manager.runtime import CursorReset, ManagerRuntime, RuntimeCapacity, RuntimeConflict
 from cbtools.manager.settings import SettingsConflict, SettingsStore, SettingsValidation, settings_store
-from cbtools.anilist_auth import AniListAuth, AniListAuthError, CALLBACK_PATH, STATE_SECONDS, anilist_auth
+from cbtools.anilist.auth import AniListAuth, AniListAuthError, CALLBACK_PATH, STATE_SECONDS, anilist_auth
 
 
 class APIError(ValueError):

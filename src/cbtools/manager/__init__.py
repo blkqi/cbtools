@@ -23,7 +23,7 @@ from cbtools.manager.settings import SettingsStore, settings_store
 from cbtools.tag import _get_series_id, tag
 from cbtools.rename import rename
 from cbtools.repack import repack
-from cbtools.anilist_auth import AniListAuthError
+from cbtools.anilist.auth import AniListAuthError
 
 
 API_BASE_URL = f"http://localhost:{config['manager.api_port']}"

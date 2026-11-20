@@ -2,6 +2,7 @@ from setuptools import setup
 
 packages=[
     'cbtools',
+    'cbtools.anilist',
     'cbtools.tag',
     'cbtools.tag.extensions',
     'cbtools.manager',
@@ -10,7 +11,7 @@ packages=[
 setup(name='cbtools',
       version='0.0.0',
       package_dir={'': 'src'},
-      package_data={'cbtools': ['*.xsd'], 'cbtools.tag': ['*.gql'], 'cbtools.manager': ['web/*']},
+      package_data={'cbtools': ['*.xsd'], 'cbtools.anilist': ['*.gql'], 'cbtools.manager': ['web/*']},
       packages=packages,
       scripts=['bin/cb', 'bin/cbinfo', 'bin/cbrename', 'bin/cbtag', 'bin/cbscale', 'bin/cbconvert', 'bin/cbmanager'],
       install_requires=['lxml', 'jmespath', 'requests', 'dictdiffer', 'waitress', 'flask', 'watchdog', 'Pillow>=6.2.2', 'numpy'],
