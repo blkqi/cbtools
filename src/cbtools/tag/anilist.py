@@ -1,83 +1,19 @@
-import time
-import requests
 import jmespath
-import importlib.resources
-import os
-
-from functools import lru_cache
+import importlib
 
 from cbtools.exceptions import AnilistApiError
 from cbtools.log import logger
 from cbtools.core import ComicInfo
 from cbtools.config import config
+from cbtools.anilist.client import AniListResponse
 
 
-class AniListAdapter(requests.adapters.HTTPAdapter):
-    def __init__(self, *args, **kwds):
-        super().__init__(*args, **kwds)
+class AniListMetadata(AniListResponse):
+    def __init__(self, *args, settings=None, reporter=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.settings = config if settings is None else settings
+        self.reporter = reporter
 
-    def send(self, request, **kwds):
-        while True:
-            response = super().send(request, **kwds)
-
-            if not self._throttle(response):
-                break
-
-        return response
-
-    def _throttle(self, response):
-        if response.status_code == 429:
-            self._wait(int(response.headers.get('Retry-After', 60)))
-            return True
-        else:
-            return False
-
-    def _wait(self, period):
-        logger.warn(f'AniList rate limit exceeded! Retry in {period} seconds.')
-        time.sleep(period)
-
-
-class AniList:
-    def __init__(self):
-        self.api_url = 'https://graphql.anilist.co'
-
-        adapter = AniListAdapter()
-        self.session = requests.session()
-        self.session.mount('http://', adapter)
-        self.session.mount('https://', adapter)
-
-        token = os.getenv('ANILIST_TOKEN')
-        if token:
-            self.session.headers['Authorization'] = f'Bearer {token}'
-
-    @lru_cache(1)
-    def search(self, series_id):
-        query = importlib.resources.files(__name__).joinpath('anilistid.gql').open().read()
-        variables = {
-            'series_id': series_id,
-        }
-
-        response = self.session.post(self.api_url, json={'query': query, 'variables': variables})
-
-        # Token expired/invalid: drop it and retry anonymously.
-        if response.status_code == 401 and 'Authorization' in self.session.headers:
-            logger.warning('AniList token expired or invalid, falling back to anonymous access.')
-            del self.session.headers['Authorization']
-            response = self.session.post(self.api_url, json={'query': query, 'variables': variables})
-
-        try:
-            response.raise_for_status()
-        except requests.HTTPError:
-            try:
-                message = response.json()['errors'][0]['message']
-            except (ValueError, KeyError, IndexError, TypeError):
-                message = f'AniList entry not found for ID {series_id}'
-            raise AnilistApiError(message)
-
-        return AniListResponse(response.json())
-
-
-class AniListResponse(dict):
     ANILIST_COMICINFO_JMESMAP = {
         'Series': 'title.romaji',
         'Count': 'volumes',
@@ -96,10 +32,6 @@ class AniListResponse(dict):
         'Month': 'startDate.month',
         'Day': 'startDate.day',
     }
-
-    @property
-    def media(self):
-        return self.get('data', {}).get('Media', {})
 
     def to_cinfo(self):
         cinfo = ComicInfo()
@@ -126,9 +58,11 @@ class AniListResponse(dict):
         return cinfo
 
     def _apply_extensions(self, cinfo):
-        for extension in config['tag.extensions']:
+        for extension in self.settings['tag.extensions']:
             try:
                 module = importlib.import_module(f'cbtools.tag.extensions.{extension}')
                 module.extension(cinfo, self.media)
-            except ImportError:
+            except ImportError as error:
+                if self.reporter is not None:
+                    raise AnilistApiError(f'Failed to import tagging extension {extension}: {error}') from error
                 logger.error(f'Failed to import extension {extension}')

@@ -1,4 +1,5 @@
 import json
+import copy
 import logging
 import os
 import pathlib
@@ -41,13 +42,16 @@ DEFAULT_CONFIG = {
 
 
 def load_config():
-    config = DEFAULT_CONFIG
+    config = copy.deepcopy(DEFAULT_CONFIG)
 
     try:
         with open(CONFIG_FILE_PATH, 'r') as f:
-            DEFAULT_CONFIG.update(json.load(f))
-    except (FileNotFoundError, json.JSONDecodeError):
-        logger.warning('Failed to load config, using defaults')
+            values = json.load(f)
+            if not isinstance(values, dict):
+                raise ValueError('Configuration must be a JSON object')
+            config.update(values)
+    except (FileNotFoundError, ValueError) as error:
+        logger.warning('Failed to load config, using defaults: %s', error)
 
     return config
 
