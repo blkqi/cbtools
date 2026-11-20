@@ -15,6 +15,7 @@ let source = null, retryTimer, toastTimer, generation = 0, failures = 0;
 let pollingUntil = 0, polling = false, lastReceive = 0, lastUpdate = null;
 let stopped = false, confirmAction = null, inspectorKey = "", inspectorJob = null, activityKey = "";
 let offlineReason = "Connecting to manager...";
+let authStatus = null, authError = "", authChecked = 0, oauthNavigating = false;
 
 function cursorParts(cursor) {
   if (typeof cursor !== "string") throw new Error("Missing manager event cursor.");
@@ -399,6 +400,7 @@ function render() {
   $("#clear").disabled = !online || writing || !model?.queue.length;
   $("#flush").disabled = !online || writing || !model?.queue.some(id => eligible(model.jobs[id]) > 0);
   $$("#settings-form input, #settings-form textarea").forEach(input => { input.disabled = settingsSaving; });
+  renderAuth();
   updateDirty();
   updateTimes();
 }
@@ -490,8 +492,35 @@ function renderSettingsNotice(message) {
   $("#settings-notice").hidden = !problem;
   $("#settings-notice").textContent = problem;
 }
+function renderAuth() {
+  const status = authStatus, environment = status?.source === "environment";
+  $("#anilist-status").textContent = authError || (!status ? "Loading connection..." : environment
+    ? status.state === "invalid" ? "Environment token rejected. Replace or remove ANILIST_TOKEN." : "Configured through ANILIST_TOKEN."
+    : ({connected:`Connected as ${status.account}.`, expired:"Connection expired. Reconnect to AniList.",
+        invalid:"Connection rejected. Reconnect to AniList.", storage_error:status.error,
+        not_connected:"Not connected."})[status.state]);
+  $("#anilist-details").hidden = !status?.expires_at;
+  $("#anilist-details").textContent = status?.expires_at ? `Token expires ${new Date(status.expires_at * 1000).toLocaleDateString()}.` : "";
+  $("#anilist-setup").hidden = environment || !status?.setup_error;
+  $("#anilist-setup").textContent = status?.setup_error ?? "";
+  $("#anilist-connect").hidden = environment;
+  $("#anilist-connect").textContent = status?.source === "oauth" ? "Reconnect to AniList" : "Connect to AniList";
+  $("#anilist-connect").disabled = !online || writing || !status?.can_connect || Boolean(authError);
+  $("#anilist-remove").hidden = !status?.can_remove;
+  $("#anilist-remove").disabled = !online || writing || Boolean(authError);
+}
+async function loadAuth() {
+  authChecked = Date.now();
+  try {
+    authStatus = await api("anilist");
+    authError = "";
+  } catch (error) {
+    authError = `AniList status unavailable: ${error.message}`;
+    throw error;
+  } finally { renderAuth(); }
+}
 async function loadSettings(force = false) {
-  const next = await api("settings");
+  const [next] = await Promise.all([api("settings"), loadAuth().catch(showError)]);
   if (!force && settings && changes().length) {
     if (next.revision !== settings.revision || next.external_change || next.load_error) {
       renderSettingsNotice("Saved settings changed. The draft is retained. Discard/reload it before editing again.");
@@ -518,6 +547,7 @@ function setView(next) {
     else button.removeAttribute("aria-current");
   });
   document.title = `cbmanager / ${{overview:"Overview", activity:"Activity", settings:"Settings"}[next]}`;
+  if (next === "settings" && online) loadAuth().catch(showError);
   requestAnimationFrame(sizePanels);
   return true;
 }
@@ -607,6 +637,20 @@ document.addEventListener("click", async event => {
     if (setView("activity")) { renderActivity(); $("#search").focus(); }
   } else if (action === "discard") {
     try { await loadSettings(true); } catch (error) { showError(error); }
+  } else if (action === "anilist-connect") {
+    if (changes().length && !confirm("Connecting to AniList leaves this page. Discard unsaved settings?")) return;
+    modal("Connect to AniList?", "<p>Connecting authorizes cbtools to access your AniList account. Authentication is optional, but may help if AniList restricts anonymous requests.</p>",
+      "Continue to AniList", () => perform(async () => {
+        const result = await api("anilist/connect", {method:"POST", data:{}});
+        oauthNavigating = true;
+        location.assign(result.url);
+      }, "Opening AniList authorization..."));
+  } else if (action === "anilist-remove") {
+    modal("Remove AniList connection?", "<p>Remove the saved token from cbtools. This does not revoke it on AniList; revoke the authorization in AniList settings if needed. Active tagging retains its current token.</p>",
+      "Remove connection", () => perform(async () => {
+        await api("anilist", {method:"DELETE", data:{}});
+        await loadAuth();
+      }, "Saved AniList connection removed."), true);
   } else if (action === "dismiss" || action === "dismiss-all") {
     const ids = action === "dismiss-all" ? activeAlerts().map(job => job.id) : [button.dataset.job];
     await perform(async () => {
@@ -628,13 +672,23 @@ document.addEventListener("click", async event => {
 setInterval(() => {
   updateTimes();
   if (online && source && Date.now() - lastReceive > 45000) scheduleReconnect("Activity stream became stale. Reconnecting...", 0);
+  if (online && view === "settings" && !writing && Date.now() - authChecked > 30000) loadAuth().catch(showError);
 }, 1000);
 const panelSizer = new ResizeObserver(() => requestAnimationFrame(sizePanels));
 $$(".topbar, .stats, main > .banner, .page-footer").forEach(element => panelSizer.observe(element));
 window.addEventListener("resize", sizePanels);
 window.addEventListener("pagehide", () => { stopped = true; clearTimeout(retryTimer); source?.close(); panelSizer.disconnect(); });
 window.addEventListener("beforeunload", event => {
-  if (changes().length) { event.preventDefault(); event.returnValue = ""; }
+  if (!oauthNavigating && changes().length) { event.preventDefault(); event.returnValue = ""; }
 });
+const oauthResult = new URL(location.href);
+if (oauthResult.searchParams.has("anilist_connected") || oauthResult.searchParams.has("anilist_error")) {
+  setView("settings");
+  if (oauthResult.searchParams.has("anilist_error")) showError(new Error(oauthResult.searchParams.get("anilist_error")));
+  else notify("AniList connected.");
+  oauthResult.searchParams.delete("anilist_connected");
+  oauthResult.searchParams.delete("anilist_error");
+  history.replaceState(null, "", oauthResult.pathname + oauthResult.search + oauthResult.hash);
+}
 render();
 connect();

@@ -8,6 +8,7 @@ import time
 from pathlib import Path
 
 from flask import Flask, Response, jsonify, redirect, request
+from urllib.parse import urlencode
 from werkzeug.exceptions import HTTPException
 
 from cbtools.constants import SUPPORTED_FILE_EXTENSIONS
@@ -15,6 +16,7 @@ from cbtools.log import logger
 from cbtools.manager.queue import manager_queue
 from cbtools.manager.runtime import CursorReset, ManagerRuntime, RuntimeCapacity, RuntimeConflict
 from cbtools.manager.settings import SettingsConflict, SettingsStore, SettingsValidation, settings_store
+from cbtools.anilist_auth import AniListAuth, AniListAuthError, CALLBACK_PATH, STATE_SECONDS, anilist_auth
 
 
 class APIError(ValueError):
@@ -56,20 +58,33 @@ def scan_library(runtime: ManagerRuntime, root: Path, paths: list[Path] | None, 
             raise
 
 
-def create_app(runtime: ManagerRuntime | None = None, settings: SettingsStore | None = None) -> Flask:
+def create_app(runtime: ManagerRuntime | None = None, settings: SettingsStore | None = None,
+               auth: AniListAuth | None = None) -> Flask:
     runtime = manager_queue if runtime is None else runtime
     settings = settings_store if settings is None else settings
+    auth = anilist_auth if auth is None else auth
     app = Flask(__name__, static_folder="web", static_url_path="/ui/assets")
     app.config.update(MAX_CONTENT_LENGTH=65536, SSE_HEARTBEAT=15, SSE_MAX_SECONDS=300)
     csrf_token = secrets.token_urlsafe(32)
     streams = threading.BoundedSemaphore(4)
+    oauth_cookie = "cbmanager_anilist_state"
 
     @app.before_request
     def request_guards():
+        # OAuth redirects arrive cross-site; the callback verifies browser-bound state instead.
+        if request.endpoint == "anilist_callback" and request.method == "GET":
+            return
         origin = request.headers.get("Origin")
         if origin and origin != request.host_url.rstrip("/"):
             raise APIError("Cross-origin requests are not allowed.", 403, "ORIGIN_REJECTED")
-        if request.headers.get("Sec-Fetch-Site") == "cross-site":
+        # OAuth return redirects retain cross-site metadata for the UI document.
+        ui_navigation = (
+            request.method == "GET"
+            and request.endpoint in ("ui", "ui_redirect")
+            and request.headers.get("Sec-Fetch-Mode") == "navigate"
+            and request.headers.get("Sec-Fetch-Dest") == "document"
+        )
+        if request.headers.get("Sec-Fetch-Site") == "cross-site" and not ui_navigation:
             raise APIError("Cross-site requests are not allowed.", 403, "ORIGIN_REJECTED")
         if request.path.startswith("/api/v1/") and request.method in ("POST", "PATCH", "DELETE"):
             supplied = request.headers.get("X-CSRF-Token", "")
@@ -98,6 +113,41 @@ def create_app(runtime: ManagerRuntime | None = None, settings: SettingsStore | 
     @app.errorhandler(SettingsValidation)
     def invalid_settings(error):
         return jsonify(error={"code": "INVALID_SETTINGS", "message": str(error), "fields": error.fields}), 400
+
+    @app.errorhandler(AniListAuthError)
+    def invalid_anilist_auth(error):
+        logger.warning("AniList authentication: %s", error)
+        return jsonify(error={"code": "ANILIST_AUTH", "message": str(error)}), error.status
+
+    @app.get("/api/v1/anilist")
+    def anilist_status():
+        return jsonify(auth.status())
+
+    @app.post("/api/v1/anilist/connect")
+    def anilist_connect():
+        url, state, secure = auth.begin(request.cookies.get(oauth_cookie))
+        response = jsonify(url=url)
+        response.set_cookie(oauth_cookie, state, max_age=STATE_SECONDS, httponly=True,
+                            secure=secure, samesite="Lax", path=CALLBACK_PATH)
+        return response
+
+    @app.get(CALLBACK_PATH)
+    def anilist_callback():
+        try:
+            auth.complete(request.args.get("state", ""), request.cookies.get(oauth_cookie, ""),
+                          request.args.get("code", ""), denied="error" in request.args)
+        except AniListAuthError as error:
+            logger.warning("AniList OAuth callback: %s", error)
+            response = redirect("/ui/?" + urlencode({"anilist_error": str(error)}), code=303)
+        else:
+            response = redirect("/ui/?anilist_connected=1", code=303)
+        response.delete_cookie(oauth_cookie, path=CALLBACK_PATH)
+        return response
+
+    @app.delete("/api/v1/anilist")
+    def anilist_remove():
+        auth.remove()
+        return jsonify(auth.status())
 
     @app.errorhandler(SettingsConflict)
     def settings_conflict(error):

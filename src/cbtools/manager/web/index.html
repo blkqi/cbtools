@@ -86,12 +86,21 @@
         <div class="banner error" id="settings-errors" role="alert" hidden></div>
         <div class="settings-save"><strong class="small" id="dirty-count">No unsaved changes</strong><div class="row"><button class="button" id="discard" type="button" data-action="discard" disabled>Discard</button><button class="button primary" id="review" type="submit" data-mutation disabled>Review changes</button></div></div>
       </form>
-      <aside class="card" aria-label="Library maintenance">
-        <div class="card-header"><h2>Library maintenance</h2></div>
-        <div class="maintenance-body"><h3>Rescan library</h3><p>Recheck all series in the library.</p><button class="button" id="rescan" data-action="rescan" data-mutation disabled>Rescan</button></div>
+      <div class="settings-asides">
+      <aside class="card" aria-label="Rescan library">
+        <div class="card-header"><h2>Rescan library</h2></div>
+        <div class="maintenance-body"><p>Recheck all series in the library.</p><button class="button" id="rescan" data-action="rescan" data-mutation disabled>Rescan</button></div>
         <div class="scan-status" id="scan-status" role="status" hidden></div>
       </aside>
-      <!-- TODO: Add an AniList auth setup card on the right. -->
+      <aside class="card" aria-label="AniList authentication">
+        <div class="card-header"><h2>AniList authentication</h2></div>
+        <div class="maintenance-body">
+          <p role="status"><span id="anilist-status">Loading connection...</span> <span id="anilist-details" hidden></span></p>
+          <p id="anilist-setup" hidden></p>
+          <div class="row"><button class="button" id="anilist-connect" data-action="anilist-connect" data-mutation disabled>Connect to AniList</button><button class="text-button" id="anilist-remove" data-action="anilist-remove" data-mutation hidden>Remove connection</button></div>
+        </div>
+      </aside>
+      </div>
     </div>
   </section>
   <footer class="page-footer"><span id="snapshot-label"></span></footer>

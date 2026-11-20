@@ -11,3 +11,5 @@
 **/*.egg-info/
 **/.env
 **/.env.*
+**/anilist-auth.json
+**/.anilist-auth-*

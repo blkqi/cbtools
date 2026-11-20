@@ -23,6 +23,7 @@ from cbtools.manager.settings import SettingsStore, settings_store
 from cbtools.tag import _get_series_id, tag
 from cbtools.rename import rename
 from cbtools.repack import repack
+from cbtools.anilist_auth import AniListAuthError
 
 
 API_BASE_URL = f"http://localhost:{config['manager.api_port']}"
@@ -102,6 +103,8 @@ async def is_folder_write_inprogress(path):
 
 
 def _failure(error: Exception, stage: str | None, settings: dict) -> StageIssue:
+    if isinstance(error, AniListAuthError):
+        return StageIssue("ANILIST_AUTH_ERROR", str(error), "Check AniList authentication in Settings, then rescan.")
     if isinstance(error, PermissionError):
         return StageIssue("PERMISSION_DENIED", str(error), "Check library permissions, then rescan the folder.")
     if isinstance(error, InvalidArgumentError) and stage == "tagging":

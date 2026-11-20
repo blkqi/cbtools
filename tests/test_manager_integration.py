@@ -17,6 +17,7 @@ from waitress import create_server
 from watchdog.observers import Observer
 
 from cbtools.activity import StageResult
+from cbtools.anilist_auth import AniListAuthError
 from cbtools.config import DEFAULT_CONFIG
 from cbtools.manager import LibraryHandler, count_queued_archives, process_job
 from cbtools.manager.api import create_app
@@ -90,6 +91,19 @@ class ManagerIntegrationTests(unittest.TestCase):
         self.assertIsNone(self.runtime.snapshot()["active"])
         self.runtime.enqueue(self.library)
         self.assertIsNotNone(self.runtime.claim())
+
+    def test_credential_storage_failure_has_an_actionable_settings_remedy(self):
+        series = self.library / "Series"
+        series.mkdir()
+        (series / "V1.cbz").write_bytes(b"fixture")
+        with patch("cbtools.manager.repack", return_value=StageResult()), patch(
+            "cbtools.manager.tag", side_effect=AniListAuthError("Could not read AniList credentials.", 503)
+        ):
+            job_id = self.run_job(series)
+        error = self.runtime.snapshot()["jobs"][job_id]["error"]
+        self.assertEqual(error["code"], "ANILIST_AUTH_ERROR")
+        self.assertIn("Settings", error["remedy"])
+        self.assertIsNone(self.runtime.snapshot()["active"])
 
     def test_network_timeout_is_an_actionable_anilist_error(self):
         series = self.library / "Series"

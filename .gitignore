@@ -2,3 +2,7 @@
 __pycache__
 debug
 build
+anilist-auth.json
+.anilist-auth-*
+.env
+.env.*

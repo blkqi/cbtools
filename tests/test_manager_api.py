@@ -4,7 +4,10 @@ import time
 import unittest
 
 from pathlib import Path
+from unittest.mock import patch
+from urllib.parse import parse_qs, urlsplit
 
+from cbtools.anilist_auth import AniListAuth
 from cbtools.activity import StageIssue
 from cbtools.config import DEFAULT_CONFIG
 from cbtools.manager.api import create_app
@@ -21,13 +24,83 @@ class APITests(unittest.TestCase):
         values["manager.library_path"] = str(self.root)
         self.store = SettingsStore(self.root / "config.json", values)
         self.runtime = ManagerRuntime(0, event_limit=5)
-        self.app = create_app(self.runtime, self.store)
+        self.auth = AniListAuth(self.root / "anilist-auth.json")
+        self.app = create_app(self.runtime, self.store, self.auth)
         self.client = self.app.test_client()
         self.token = self.client.get("/api/v1/snapshot").json["csrf_token"]
         self.headers = {"X-CSRF-Token": self.token}
 
     def post(self, url, value=None):
         return self.client.post(url, json={} if value is None else value, headers=self.headers)
+
+    def test_oauth_callback_is_browser_bound_and_mutations_use_existing_guards(self):
+        from test_anilist_auth import OAUTH_ENV, response
+
+        with patch.dict("os.environ", {
+            **OAUTH_ENV, "ANILIST_REDIRECT_URI": "http://localhost/api/v1/anilist/callback",
+        }):
+            url = "/api/v1/anilist/connect"
+            self.assertEqual(self.client.post(url, json={}).status_code, 403)
+            self.assertEqual(self.client.post(url, json={}, headers={
+                **self.headers, "Origin": "https://other.example",
+            }).status_code, 403)
+            self.assertEqual(self.client.post(url, data="{}", headers=self.headers).status_code, 415)
+            start = self.post(url)
+            cookie = start.headers["Set-Cookie"]
+            self.assertIn("HttpOnly", cookie)
+            self.assertIn("SameSite=Lax", cookie)
+            self.assertIn("Path=/api/v1/anilist/callback", cookie)
+            state = parse_qs(urlsplit(start.json["url"]).query)["state"][0]
+            callback = "/api/v1/anilist/callback?code=fixture-code&state=" + state
+            navigation = {
+                "Sec-Fetch-Site": "cross-site", "Sec-Fetch-Mode": "navigate",
+                "Sec-Fetch-Dest": "document",
+            }
+            with patch("cbtools.anilist_auth.requests.post", side_effect=[
+                response({"access_token": "fixture-access-token", "expires_in": 3600}),
+                response({"data": {"Viewer": {"id": 7, "name": "FixtureAccount"}}}),
+            ]) as post:
+                other = self.app.test_client()
+                rejected = other.get(callback, headers=navigation)
+                self.assertIn("anilist_error=", rejected.location)
+                post.assert_not_called()
+                with other.get(rejected.location, headers=navigation) as page:
+                    self.assertEqual(page.status_code, 200)
+                    self.assertEqual(page.mimetype, "text/html")
+                finished = self.client.get(callback, headers=navigation)
+                self.assertEqual(finished.status_code, 303)
+                self.assertEqual(finished.location, "/ui/?anilist_connected=1")
+                self.assertEqual(post.call_count, 2)
+                with self.client.get(finished.location, headers=navigation) as page:
+                    self.assertEqual(page.status_code, 200)
+                    self.assertEqual(page.mimetype, "text/html")
+            for endpoint in ("/api/v1/anilist", "/api/v1/settings", "/api/v1/snapshot", "/"):
+                result = self.client.get(endpoint)
+                self.assertNotIn("fixture-access-token", result.get_data(as_text=True))
+                self.assertNotIn(OAUTH_ENV["ANILIST_CLIENT_SECRET"], result.get_data(as_text=True))
+            self.assertEqual(self.client.delete("/api/v1/anilist", json={}).status_code, 403)
+            removed = self.client.delete("/api/v1/anilist", json={}, headers=self.headers)
+            self.assertEqual(removed.json["state"], "not_connected")
+            self.assertFalse(self.auth.path.exists())
+
+    def test_oauth_missing_setup_and_failed_callbacks_do_not_disclose_provider_errors(self):
+        from test_anilist_auth import OAUTH_ENV, response
+
+        with patch.dict("os.environ", {**OAUTH_ENV, "ANILIST_CLIENT_SECRET": ""}):
+            status = self.client.get("/api/v1/anilist")
+            self.assertFalse(status.json["can_connect"])
+            self.assertEqual(self.post("/api/v1/anilist/connect").status_code, 409)
+        with patch.dict("os.environ", OAUTH_ENV):
+            start = self.post("/api/v1/anilist/connect")
+            self.assertIn("Secure", start.headers["Set-Cookie"])
+            state = parse_qs(urlsplit(start.json["url"]).query)["state"][0]
+            with patch("cbtools.anilist_auth.requests.post", return_value=response({
+                "message": "fixture-secret", "access_token": "fixture-secret",
+            }, 401)):
+                failed = self.client.get("/api/v1/anilist/callback?code=fixture-code&state=" + state)
+            self.assertIn("anilist_error=", failed.location)
+            self.assertNotIn("fixture-secret", failed.location)
+            self.assertEqual(self.auth.status()["state"], "not_connected")
 
     def test_legacy_contracts_and_library_containment(self):
         series = self.root / "Series"
@@ -49,6 +122,33 @@ class APITests(unittest.TestCase):
         self.assertEqual(self.client.post("/clear", headers={"Origin": "null"}).status_code, 403)
         self.assertEqual(self.client.post("/api/v1/queue/clear", data="{}", headers=self.headers).status_code, 415)
         self.assertEqual(self.post("/api/v1/queue/clear", []).status_code, 400)
+
+    def test_cross_site_ui_navigation_preserves_request_guards(self):
+        navigation = {
+            "Sec-Fetch-Site": "cross-site", "Sec-Fetch-Mode": "navigate",
+            "Sec-Fetch-Dest": "document",
+        }
+        with self.client.get("/ui", headers=navigation, follow_redirects=True) as page:
+            self.assertEqual(page.status_code, 200)
+            self.assertEqual(page.mimetype, "text/html")
+        for endpoint, headers in (
+            ("/ui/", {**navigation, "Sec-Fetch-Mode": "cors"}),
+            ("/ui/", {**navigation, "Sec-Fetch-Dest": "iframe"}),
+            ("/ui/", {**navigation, "Origin": "https://other.example"}),
+            ("/ui/assets/index.html", navigation),
+            ("/api/v1/snapshot", navigation),
+            ("/api/v1/anilist", navigation),
+            ("/", navigation),
+        ):
+            with self.subTest(endpoint=endpoint, headers=headers):
+                result = self.client.get(endpoint, headers=headers)
+                self.assertEqual(result.status_code, 403)
+                self.assertEqual(result.json["error"]["code"], "ORIGIN_REJECTED")
+        for endpoint in ("/api/v1/queue/clear", "/clear"):
+            with self.subTest(endpoint=endpoint):
+                result = self.client.post(endpoint, json={}, headers={**self.headers, **navigation})
+                self.assertEqual(result.status_code, 403)
+                self.assertEqual(result.json["error"]["code"], "ORIGIN_REJECTED")
 
     def test_settings_revisions_and_bulk_acknowledgement(self):
         settings = self.client.get("/api/v1/settings")

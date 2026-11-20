@@ -2,7 +2,6 @@ import time
 import requests
 import jmespath
 import importlib.resources
-import os
 
 from functools import lru_cache
 
@@ -10,6 +9,7 @@ from cbtools.exceptions import AnilistApiError
 from cbtools.log import logger
 from cbtools.core import ComicInfo
 from cbtools.config import config
+from cbtools.anilist_auth import anilist_auth
 
 
 class AniListAdapter(requests.adapters.HTTPAdapter):
@@ -57,7 +57,7 @@ class AniList:
         self.session.mount('http://', adapter)
         self.session.mount('https://', adapter)
 
-        token = os.getenv('ANILIST_TOKEN')
+        token = anilist_auth.token()
         if token:
             self.session.headers['Authorization'] = f'Bearer {token}'
 
@@ -72,7 +72,8 @@ class AniList:
 
         # Token expired/invalid: drop it and retry anonymously.
         if response.status_code == 401 and 'Authorization' in self.session.headers:
-            logger.warning('AniList token expired or invalid, falling back to anonymous access.')
+            anilist_auth.reject(self.session.headers['Authorization'].removeprefix('Bearer '))
+            response.close()
             del self.session.headers['Authorization']
             response = self.session.post(self.api_url, json={'query': query, 'variables': variables}, timeout=(10, 60))
 
