@@ -10,7 +10,7 @@ const activeStates = ["checking_files", ...stages];
 const labels = {queued:"Queued", checking_files:"Checking files", repacking:"Repacking", tagging:"Tagging", renaming:"Renaming", succeeded:"Completed", failed:"Failed", removed:"Removed"};
 const colors = {queued:"gray", checking_files:"blue", repacking:"blue", tagging:"blue", renaming:"blue", succeeded:"green", failed:"red", removed:"gray"};
 let model = null, selected = null, scope = null, view = "overview";
-let settings = null, online = false, writing = false, settingsSaving = false;
+let settings = null, settingsGroup = null, online = false, writing = false, settingsSaving = false;
 let source = null, retryTimer, toastTimer, generation = 0, failures = 0;
 let pollingUntil = 0, polling = false, lastReceive = 0, lastUpdate = null;
 let stopped = false, confirmAction = null, inspectorKey = "", inspectorJob = null, activityKey = "";
@@ -57,6 +57,8 @@ function showError(error) {
       `${settings?.fields.find(field => field.key === key)?.label ?? key}: ${message}`
     ).join(" ");
     $("#settings-errors").hidden = false;
+    const first = visibleFields().find(field => Object.hasOwn(error.fields, field.key));
+    if (first) selectSettingsGroup(first.group);
   }
 }
 
@@ -428,7 +430,12 @@ function sizePanels() {
   panel.style.setProperty("--panel-max-height", `${Math.max(200, Math.floor(available))}px`);
 }
 
-const visibleFields = () => settings?.fields.filter(field => field.key !== "manager.api_port") ?? [];
+const visibleFields = () => {
+  const fields = settings?.fields.filter(field => field.key !== "manager.api_port")
+    .map(field => field.group === "Library" ? {...field, group:"Processing"} : field) ?? [];
+  const library = fields.find(field => field.key === "manager.library_path");
+  return library ? [library, ...fields.filter(field => field !== library)] : fields;
+};
 function formValues() {
   if (!settings) return {};
   return Object.fromEntries(visibleFields().map(field => {
@@ -458,9 +465,16 @@ function updateDirty() {
 const displayValue = value => typeof value === "boolean" ? value ? "On" : "Off" : Array.isArray(value) ? value.join(", ") || "(none)" : String(value);
 
 function populateSettings() {
-  const fields = visibleFields(), groups = [...new Set(fields.map(field => field.group))];
-  $("#settings-fields").innerHTML = groups.map(group => `<section class="settings-section"><h2>${escapeHtml(group)}</h2>${
-    fields.filter(field => field.group === group).map(field => {
+  const fields = visibleFields(), groups = [...new Set(fields.map(field => field.group)), "Other"];
+  const selectedGroup = groups.includes(settingsGroup) ? settingsGroup : groups[0];
+  $("#settings-tabs").innerHTML = groups.map((group, index) =>
+    `<button class="settings-tab" type="button" role="tab" id="settings-tab-${index}" aria-controls="settings-panel-${index}" data-action="settings-tab" data-group="${escapeHtml(group)}">${escapeHtml(group)}</button>`
+  ).join("");
+  $("#settings-tabs").hidden = false;
+  $("#settings-fields").innerHTML = groups.map((group, index) =>
+    `<section class="settings-section" role="tabpanel" id="settings-panel-${index}" aria-labelledby="settings-tab-${index}" data-group="${escapeHtml(group)}" tabindex="0">${group === "Other"
+      ? `<div class="settings-read-only"><p>These settings are read-only.</p><pre>${escapeHtml(JSON.stringify(settings.read_only, null, 2))}</pre></div>`
+      : fields.filter(field => field.group === group).map(field => {
       const value = settings.configured[field.key], id = field.key.replaceAll(".", "-");
       const pending = settings.restart_required.includes(field.key);
       if (field.options) {
@@ -478,13 +492,29 @@ function populateSettings() {
       return `<div class="setting${pending ? " effective-pending" : ""}"><div class="setting-copy"><label for="${id}">${escapeHtml(field.label)}</label>
         <p>${escapeHtml(field.help)}</p></div>${input}</div>`;
     }).join("")
-  }</section>`).join("") + `<details><summary>Other settings (read-only)</summary><pre>${escapeHtml(JSON.stringify(settings.read_only, null, 2))}</pre></details>`;
+  }</section>`).join("");
+  selectSettingsGroup(selectedGroup);
   $("#logging-format").value = settings.configured["logging.format"];
   $("#restart-notice").hidden = !settings.restart_required.length;
   $("#restart-notice").textContent = `${settings.restart_required.length} saved setting(s) require a manager restart. Running values are unchanged.`;
   $("#settings-errors").hidden = true;
   renderSettingsNotice();
   updateDirty();
+}
+function selectSettingsGroup(group, focus = false) {
+  const tabs = $$("#settings-tabs [role=tab]"), selected = tabs.find(tab => tab.dataset.group === group);
+  tabs.forEach(tab => {
+    const active = tab === selected;
+    tab.setAttribute("aria-selected", String(active));
+    tab.tabIndex = active ? 0 : -1;
+    document.getElementById(tab.getAttribute("aria-controls")).hidden = !active;
+  });
+  if (settingsGroup !== group) $("#settings-fields").scrollTop = 0;
+  settingsGroup = group;
+  if (focus) {
+    selected.focus({preventScroll:true});
+    selected.scrollIntoView({block:"nearest", inline:"nearest"});
+  }
 }
 function renderSettingsNotice(message) {
   const problem = message ?? settings?.load_error ?? (settings?.external_change
@@ -595,7 +625,12 @@ async function perform(action, message) {
 $("#settings-form").addEventListener("input", () => { $("#settings-errors").hidden = true; updateDirty(); });
 $("#settings-form").addEventListener("submit", event => {
   event.preventDefault();
-  if (!$("#settings-form").reportValidity()) return;
+  const invalid = [...event.currentTarget.elements].find(input => input.willValidate && !input.validity.valid);
+  if (invalid) {
+    selectSettingsGroup(invalid.closest("[role=tabpanel]").dataset.group);
+    invalid.reportValidity();
+    return;
+  }
   const diff = changes(), revision = settings?.revision;
   if (!diff.length || !online) return;
   modal("Review changes", diff.map(field =>
@@ -609,6 +644,16 @@ $("#settings-form").addEventListener("submit", event => {
         populateSettings();
       }, "Settings saved.");
     } finally { settingsSaving = false; render(); }
+  });
+  $("#settings-tabs").addEventListener("keydown", event => {
+    const tabs = $$("#settings-tabs [role=tab]"), index = tabs.indexOf(event.target.closest("[role=tab]"));
+    if (index < 0) return;
+    const next = event.key === "ArrowRight" ? (index + 1) % tabs.length
+      : event.key === "ArrowLeft" ? (index + tabs.length - 1) % tabs.length
+        : event.key === "Home" ? 0 : event.key === "End" ? tabs.length - 1 : null;
+    if (next === null) return;
+    event.preventDefault();
+    selectSettingsGroup(tabs[next].dataset.group, true);
   });
 });
 $("#dialog-cancel").addEventListener("click", () => $("#action-dialog").close());
@@ -628,7 +673,8 @@ document.addEventListener("click", async event => {
   const button = event.target.closest("[data-action]");
   if (!button || button.disabled) return;
   const action = button.dataset.action;
-  if (action === "job") selectJob(button.dataset.job);
+  if (action === "settings-tab") selectSettingsGroup(button.dataset.group, true);
+  else if (action === "job") selectJob(button.dataset.job);
   else if (action === "clear-error") $("#request-error").hidden = true;
   else if (action === "all-jobs") { scope = null; $("#search").value = ""; renderActivity(); }
   else if (action === "job-activity") {

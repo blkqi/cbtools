@@ -82,7 +82,10 @@
       <form id="settings-form" class="settings-frame" data-size-panel novalidate>
         <div class="banner warning" id="restart-notice" role="status" hidden></div>
         <div class="banner warning" id="settings-notice" role="status" hidden></div>
-        <div class="card settings-panel settings-scroll" id="settings-fields" tabindex="0" role="region" aria-label="Settings fields"><div class="empty">Loading settings...</div></div>
+        <div class="card settings-card">
+          <div class="settings-tabs" id="settings-tabs" role="tablist" aria-label="Settings categories" hidden></div>
+          <div class="settings-panel settings-scroll" id="settings-fields"><div class="empty">Loading settings...</div></div>
+        </div>
         <div class="banner error" id="settings-errors" role="alert" hidden></div>
         <div class="settings-save"><strong class="small" id="dirty-count">No unsaved changes</strong><div class="row"><button class="button" id="discard" type="button" data-action="discard" disabled>Discard</button><button class="button primary" id="review" type="submit" data-mutation disabled>Review changes</button></div></div>
       </form>
